@@ -1,0 +1,68 @@
+{
+  "name": "graphql-federation-subgraph",
+  "version": "0.1.0",
+  "description": "GraphQL Federation Spec directives for any TypeScript GraphQL server — a server-agnostic alternative to @apollo/subgraph.",
+  "license": "MIT",
+  "author": "ChilliCream",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ChilliCream/graphql-federation-subgraph.git"
+  },
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run typecheck && npm run test && npm run build"
+  },
+  "peerDependencies": {
+    "graphql": "^16.11.0 || ^17.0.0"
+  },
+  "dependencies": {
+    "@graphql-tools/schema": "^10.0.0",
+    "@graphql-tools/utils": "^12.0.0"
+  },
+  "devDependencies": {
+    "graphql": "^16.11.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.5.0",
+    "vitest": "^3.0.0"
+  },
+  "keywords": [
+    "graphql",
+    "federation",
+    "graphql-federation",
+    "subgraph",
+    "composite-schemas",
+    "composite-schema-spec",
+    "source-schema",
+    "directives",
+    "typescript"
+  ]
+}
