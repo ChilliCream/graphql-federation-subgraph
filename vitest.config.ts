@@ -9,4 +9,10 @@ export default defineConfig({
   resolve: {
     alias: [{ find: /^graphql$/, replacement: 'graphql/index.js' }],
   },
+  test: {
+    // The e2e tests boot real HTTP servers (NestJS in particular takes a
+    // moment); give startup hooks room beyond the defaults.
+    testTimeout: 20_000,
+    hookTimeout: 20_000,
+  },
 });

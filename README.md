@@ -103,7 +103,27 @@ createServer(createHandler({ schema })).listen(4000);
 
 ### NestJS
 
-With schema-first drivers, pass the federation definitions alongside your own type definitions (`typeDefs: federationTypeDefsSDL`), or hand a prebuilt schema to the driver's `schema` option. Code-first (decorator-based) schemas need directive support from the schema builder itself.
+With schema-first drivers, contribute the federation definitions alongside your own type definitions:
+
+```ts
+import { Module } from '@nestjs/common';
+import { GraphQLModule } from '@nestjs/graphql';
+import { ApolloDriver, type ApolloDriverConfig } from '@nestjs/apollo';
+import { federationTypeDefsSDL } from 'graphql-federation-subgraph';
+
+@Module({
+  imports: [
+    GraphQLModule.forRoot<ApolloDriverConfig>({
+      driver: ApolloDriver,
+      typeDefs: [federationTypeDefsSDL, typeDefs].join('\n\n'),
+      resolvers,
+    }),
+  ],
+})
+export class AppModule {}
+```
+
+Code-first (decorator-based) schemas need directive support from the schema builder itself.
 
 ## Exporting the schema for composition
 
