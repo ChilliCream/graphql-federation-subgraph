@@ -178,4 +178,4 @@ By default the output contains only your own definitions with the directives app
 
 ## License
 
-MIT © ChilliCream
+MIT © Copyright (c) 2018 - present ChilliCream Inc.
