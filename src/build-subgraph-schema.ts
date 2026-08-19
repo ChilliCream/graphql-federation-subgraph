@@ -1,4 +1,8 @@
 import {
+  makeExecutableSchema,
+  type IExecutableSchemaDefinition,
+} from "@graphql-tools/schema";
+import {
   Kind,
   parse,
   type DefinitionNode,
@@ -6,10 +10,6 @@ import {
   type GraphQLSchema,
   type TypeExtensionNode,
 } from "graphql";
-import {
-  makeExecutableSchema,
-  type IExecutableSchemaDefinition,
-} from "@graphql-tools/schema";
 import { federationTypeDefs } from "./type-defs.js";
 
 /**
@@ -29,7 +29,7 @@ export interface BuildSubgraphSchemaOptions<TContext = any> extends Omit<
 
 /**
  * Builds an executable {@link GraphQLSchema} for a source schema (subgraph) as
- * defined by the GraphQL Composite Schemas Spec.
+ * defined by the GraphQL Federation Spec.
  *
  * The federation directive and scalar definitions (`@key`, `@lookup`, `@is`,
  * `FieldSelectionMap`, …) are added automatically, so type definitions can use

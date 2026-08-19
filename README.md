@@ -1,6 +1,6 @@
 # graphql-federation-subgraph
 
-Federation directives from the [GraphQL Composite Schemas Spec](https://github.com/graphql/composite-schemas-spec) for **any** TypeScript/JavaScript GraphQL server.
+Federation directives from the [GraphQL Federation Spec](https://github.com/graphql/composite-schemas-spec) for **any** TypeScript/JavaScript GraphQL server.
 
 This package plays the same role for the Composite Schemas Spec that [`@apollo/subgraph`](https://www.npmjs.com/package/@apollo/subgraph) plays for Apollo Federation: it lets a service use the federation directives (`@key`, `@lookup`, `@shareable`, …) in its schema without defining them, and export its schema for composition. Unlike `@apollo/subgraph`, it is not tied to any particular server — the result is a plain `GraphQLSchema`, so it works with GraphQL Yoga, Apollo Server, Mercurius, `graphql-http`, and anything else that accepts one.
 
