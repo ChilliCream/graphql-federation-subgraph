@@ -1,6 +1,6 @@
-import { Kind, print, type DefinitionNode, type GraphQLSchema } from 'graphql';
-import { getDocumentNodeFromSchema } from '@graphql-tools/utils';
-import { federationTypeDefs } from './type-defs.js';
+import { Kind, print, type DefinitionNode, type GraphQLSchema } from "graphql";
+import { getDocumentNodeFromSchema } from "@graphql-tools/utils";
+import { federationTypeDefs } from "./type-defs.js";
 
 export interface PrintSubgraphSchemaOptions {
   /**
@@ -44,7 +44,7 @@ export function printSubgraphSchema(
     return !isSpecDefinition(definition);
   });
 
-  return print({ kind: Kind.DOCUMENT, definitions }) + '\n';
+  return print({ kind: Kind.DOCUMENT, definitions }) + "\n";
 }
 
 // The spec's definitions in printed form, keyed by node kind + name, so

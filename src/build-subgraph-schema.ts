@@ -1,35 +1,35 @@
 import {
+  makeExecutableSchema,
+  type IExecutableSchemaDefinition,
+} from "@graphql-tools/schema";
+import {
   Kind,
   parse,
   type DefinitionNode,
   type DocumentNode,
   type GraphQLSchema,
   type TypeExtensionNode,
-} from 'graphql';
-import {
-  makeExecutableSchema,
-  type IExecutableSchemaDefinition,
-} from '@graphql-tools/schema';
-import { federationTypeDefs } from './type-defs.js';
+} from "graphql";
+import { federationTypeDefs } from "./type-defs.js";
 
 /**
  * The type definitions accepted by {@link buildSubgraphSchema}: SDL strings,
  * parsed documents, or arbitrarily nested arrays of either.
  */
 export type SubgraphTypeSource =
-  | string
-  | DocumentNode
-  | readonly SubgraphTypeSource[];
+  string | DocumentNode | readonly SubgraphTypeSource[];
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mirrors IExecutableSchemaDefinition's context default
-export interface BuildSubgraphSchemaOptions<TContext = any>
-  extends Omit<IExecutableSchemaDefinition<TContext>, 'typeDefs'> {
+export interface BuildSubgraphSchemaOptions<TContext = any> extends Omit<
+  IExecutableSchemaDefinition<TContext>,
+  "typeDefs"
+> {
   readonly typeDefs: SubgraphTypeSource;
 }
 
 /**
  * Builds an executable {@link GraphQLSchema} for a source schema (subgraph) as
- * defined by the GraphQL Composite Schemas Spec.
+ * defined by the GraphQL Federation Spec.
  *
  * The federation directive and scalar definitions (`@key`, `@lookup`, `@is`,
  * `FieldSelectionMap`, …) are added automatically, so type definitions can use
@@ -43,11 +43,13 @@ export interface BuildSubgraphSchemaOptions<TContext = any>
 export function buildSubgraphSchema<TContext = any>(
   options: BuildSubgraphSchemaOptions<TContext>,
 ): GraphQLSchema {
-  const documents = convertBaselessExtensions(normalizeTypeDefs(options.typeDefs));
+  const documents = convertBaselessExtensions(
+    normalizeTypeDefs(options.typeDefs),
+  );
   const provided = collectDefinedNames(documents);
 
-  const missingDefinitions = federationTypeDefs.definitions.filter((definition) =>
-    isMissing(definition, provided),
+  const missingDefinitions = federationTypeDefs.definitions.filter(
+    (definition) => isMissing(definition, provided),
   );
 
   const typeDefs: DocumentNode[] =
@@ -59,7 +61,7 @@ export function buildSubgraphSchema<TContext = any>(
 }
 
 function normalizeTypeDefs(typeDefs: SubgraphTypeSource): DocumentNode[] {
-  if (typeof typeDefs === 'string') {
+  if (typeof typeDefs === "string") {
     return [parse(typeDefs)];
   }
   if (isDocumentNode(typeDefs)) {
@@ -68,16 +70,18 @@ function normalizeTypeDefs(typeDefs: SubgraphTypeSource): DocumentNode[] {
   if (Array.isArray(typeDefs)) {
     // Array.isArray narrows the readonly-array union to any[], so the entry
     // type has to be restated.
-    return typeDefs.flatMap((entry: SubgraphTypeSource) => normalizeTypeDefs(entry));
+    return typeDefs.flatMap((entry: SubgraphTypeSource) =>
+      normalizeTypeDefs(entry),
+    );
   }
   throw new TypeError(
-    'buildSubgraphSchema: `typeDefs` must be an SDL string, a DocumentNode, or an array of those.',
+    "buildSubgraphSchema: `typeDefs` must be an SDL string, a DocumentNode, or an array of those.",
   );
 }
 
 function isDocumentNode(value: unknown): value is DocumentNode {
   return (
-    typeof value === 'object' &&
+    typeof value === "object" &&
     value !== null &&
     (value as DocumentNode).kind === Kind.DOCUMENT
   );
@@ -109,19 +113,24 @@ function convertBaselessExtensions(documents: DocumentNode[]): DocumentNode[] {
 
   return documents.map((document) => {
     let changed = false;
-    const definitions = document.definitions.map((definition): DefinitionNode => {
-      const definitionKind = EXTENSION_TO_DEFINITION[definition.kind];
-      if (definitionKind === undefined) {
-        return definition;
-      }
-      const name = (definition as TypeExtensionNode).name.value;
-      if (definedTypeNames.has(name)) {
-        return definition;
-      }
-      definedTypeNames.add(name);
-      changed = true;
-      return { ...definition, kind: definitionKind } as unknown as DefinitionNode;
-    });
+    const definitions = document.definitions.map(
+      (definition): DefinitionNode => {
+        const definitionKind = EXTENSION_TO_DEFINITION[definition.kind];
+        if (definitionKind === undefined) {
+          return definition;
+        }
+        const name = (definition as TypeExtensionNode).name.value;
+        if (definedTypeNames.has(name)) {
+          return definition;
+        }
+        definedTypeNames.add(name);
+        changed = true;
+        return {
+          ...definition,
+          kind: definitionKind,
+        } as unknown as DefinitionNode;
+      },
+    );
     return changed ? { kind: Kind.DOCUMENT, definitions } : document;
   });
 }
@@ -162,7 +171,10 @@ function isTypeDefinition(
   }
 }
 
-function isMissing(definition: DefinitionNode, provided: DefinedNames): boolean {
+function isMissing(
+  definition: DefinitionNode,
+  provided: DefinedNames,
+): boolean {
   if (definition.kind === Kind.DIRECTIVE_DEFINITION) {
     return !provided.directives.has(definition.name.value);
   }
