@@ -1,6 +1,6 @@
 import { Kind, print, type DefinitionNode, type GraphQLSchema } from 'graphql';
 import { getDocumentNodeFromSchema } from '@graphql-tools/utils';
-import { federationTypeDefs } from './typeDefs.js';
+import { federationTypeDefs } from './type-defs.js';
 
 export interface PrintSubgraphSchemaOptions {
   /**

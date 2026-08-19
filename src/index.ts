@@ -2,11 +2,11 @@ export {
   buildSubgraphSchema,
   type BuildSubgraphSchemaOptions,
   type SubgraphTypeSource,
-} from './buildSubgraphSchema.js';
+} from './build-subgraph-schema.js';
 export {
   printSubgraphSchema,
   type PrintSubgraphSchemaOptions,
-} from './printSubgraphSchema.js';
+} from './print-subgraph-schema.js';
 export {
   federationTypeDefs,
   federationTypeDefsSDL,
@@ -27,4 +27,4 @@ export {
   implementDirective,
   fieldSelectionMapScalar,
   fieldSelectionSetScalar,
-} from './typeDefs.js';
+} from './type-defs.js';

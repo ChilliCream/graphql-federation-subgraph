@@ -10,7 +10,7 @@ import {
   makeExecutableSchema,
   type IExecutableSchemaDefinition,
 } from '@graphql-tools/schema';
-import { federationTypeDefs } from './typeDefs.js';
+import { federationTypeDefs } from './type-defs.js';
 
 /**
  * The type definitions accepted by {@link buildSubgraphSchema}: SDL strings,
