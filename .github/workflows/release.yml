@@ -1,0 +1,72 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    name: CI
+    uses: ./.github/workflows/ci.yml
+
+  release:
+    name: Publish
+    runs-on: ubuntu-latest
+    needs: ci
+    permissions:
+      contents: write # create the GitHub release
+      id-token: write # npm trusted publishing (OIDC) + provenance
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+
+      - name: Verify tag matches package version
+        run: |
+          pkg_version="$(node -p "require('./package.json').version")"
+          tag_version="${GITHUB_REF_NAME#v}"
+          if [ "$pkg_version" != "$tag_version" ]; then
+            echo "package.json version ($pkg_version) does not match tag ($tag_version)" >&2
+            exit 1
+          fi
+
+      - name: Package
+        run: |
+          npm run build
+          npm pack
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: package
+          path: '*.tgz'
+
+      - name: Publish to npm
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          if npm view "graphql-federation-subgraph@$version" version >/dev/null 2>&1; then
+            echo "graphql-federation-subgraph@$version already on npm — skipping publish"
+          else
+            npm publish ./graphql-federation-subgraph-*.tgz --access public
+          fi
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" ./*.tgz --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" ./*.tgz \
+              --title "$GITHUB_REF_NAME" \
+              --generate-notes
+          fi

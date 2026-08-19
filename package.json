@@ -1,6 +1,6 @@
 {
   "name": "graphql-federation-subgraph",
-  "version": "0.1.0",
+  "version": "0.0.0",
   "description": "GraphQL Federation Spec directives for any TypeScript GraphQL server — a server-agnostic alternative to @apollo/subgraph.",
   "license": "MIT",
   "author": "ChilliCream",
