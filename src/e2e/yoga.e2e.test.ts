@@ -1,25 +1,30 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import Fastify, { type FastifyInstance } from 'fastify';
-import mercurius from 'mercurius';
-import { buildSubgraphSchema } from '../../src/index.js';
+import { createYoga } from 'graphql-yoga';
+import { buildSubgraphSchema } from '../index.js';
 import { expectedData, postGraphQL, resolvers, typeDefs } from './fixture.js';
 
-describe('mercurius', () => {
-  let app: FastifyInstance;
+describe('graphql-yoga', () => {
+  let server: Server;
   let url: string;
 
   beforeAll(async () => {
-    app = Fastify();
-    app.register(mercurius, {
+    const yoga = createYoga({
       schema: buildSubgraphSchema({ typeDefs, resolvers }),
     });
-    await app.listen({ port: 0, host: '127.0.0.1' });
-    const { port } = app.server.address() as AddressInfo;
+    server = createServer(yoga);
+    await new Promise<void>((resolve) => server.listen(0, resolve));
+    const { port } = server.address() as AddressInfo;
     url = `http://127.0.0.1:${port}/graphql`;
   });
 
-  afterAll(() => app.close());
+  afterAll(
+    () =>
+      new Promise<void>((resolve, reject) =>
+        server.close((error) => (error ? reject(error) : resolve())),
+      ),
+  );
 
   it('serves the subgraph schema over HTTP', async () => {
     const result = await postGraphQL(url);

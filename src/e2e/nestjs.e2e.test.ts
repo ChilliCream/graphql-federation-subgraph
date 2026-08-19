@@ -5,7 +5,7 @@ import { Module, type INestApplication } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, type ApolloDriverConfig } from '@nestjs/apollo';
-import { federationTypeDefsSDL } from '../../src/index.js';
+import { federationTypeDefsSDL } from '../index.js';
 import { expectedData, postGraphQL, resolvers, typeDefs } from './fixture.js';
 
 // Schema-first NestJS: the federation definitions are contributed as plain

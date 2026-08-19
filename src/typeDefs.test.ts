@@ -13,7 +13,7 @@ import {
   keyDirective,
   overrideDirective,
   shareableDirective,
-} from '../src/index.js';
+} from './index.js';
 
 describe('federation type definitions', () => {
   it('defines every directive and scalar exactly once', () => {

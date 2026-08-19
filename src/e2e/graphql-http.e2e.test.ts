@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { createHandler } from 'graphql-http/lib/use/http';
-import { buildSubgraphSchema } from '../../src/index.js';
+import { buildSubgraphSchema } from '../index.js';
 import { expectedData, postGraphQL, resolvers, typeDefs } from './fixture.js';
 
 describe('graphql-http', () => {
