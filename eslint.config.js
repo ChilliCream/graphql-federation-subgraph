@@ -11,13 +11,13 @@ export default tseslint.config(
     languageOptions: {
       parserOptions: {
         projectService: true,
-        tsconfigRootDir: import.meta.dirname,
-      },
-    },
+        tsconfigRootDir: import.meta.dirname
+      }
+    }
   },
   {
     files: ["**/*.js"],
-    extends: [tseslint.configs.disableTypeChecked],
+    extends: [tseslint.configs.disableTypeChecked]
   },
-  prettierConfig,
+  prettierConfig
 );

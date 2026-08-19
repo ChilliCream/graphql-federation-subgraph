@@ -1,6 +1,6 @@
 import {
   makeExecutableSchema,
-  type IExecutableSchemaDefinition,
+  type IExecutableSchemaDefinition
 } from "@graphql-tools/schema";
 import {
   Kind,
@@ -8,7 +8,7 @@ import {
   type DefinitionNode,
   type DocumentNode,
   type GraphQLSchema,
-  type TypeExtensionNode,
+  type TypeExtensionNode
 } from "graphql";
 import { federationTypeDefs } from "./type-defs.js";
 
@@ -41,15 +41,15 @@ export interface BuildSubgraphSchemaOptions<TContext = any> extends Omit<
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mirrors IExecutableSchemaDefinition's context default
 export function buildSubgraphSchema<TContext = any>(
-  options: BuildSubgraphSchemaOptions<TContext>,
+  options: BuildSubgraphSchemaOptions<TContext>
 ): GraphQLSchema {
   const documents = convertBaselessExtensions(
-    normalizeTypeDefs(options.typeDefs),
+    normalizeTypeDefs(options.typeDefs)
   );
   const provided = collectDefinedNames(documents);
 
   const missingDefinitions = federationTypeDefs.definitions.filter(
-    (definition) => isMissing(definition, provided),
+    (definition) => isMissing(definition, provided)
   );
 
   const typeDefs: DocumentNode[] =
@@ -71,11 +71,11 @@ function normalizeTypeDefs(typeDefs: SubgraphTypeSource): DocumentNode[] {
     // Array.isArray narrows the readonly-array union to any[], so the entry
     // type has to be restated.
     return typeDefs.flatMap((entry: SubgraphTypeSource) =>
-      normalizeTypeDefs(entry),
+      normalizeTypeDefs(entry)
     );
   }
   throw new TypeError(
-    "buildSubgraphSchema: `typeDefs` must be an SDL string, a DocumentNode, or an array of those.",
+    "buildSubgraphSchema: `typeDefs` must be an SDL string, a DocumentNode, or an array of those."
   );
 }
 
@@ -93,7 +93,7 @@ const EXTENSION_TO_DEFINITION: Partial<Record<string, Kind>> = {
   [Kind.INTERFACE_TYPE_EXTENSION]: Kind.INTERFACE_TYPE_DEFINITION,
   [Kind.UNION_TYPE_EXTENSION]: Kind.UNION_TYPE_DEFINITION,
   [Kind.ENUM_TYPE_EXTENSION]: Kind.ENUM_TYPE_DEFINITION,
-  [Kind.INPUT_OBJECT_TYPE_EXTENSION]: Kind.INPUT_OBJECT_TYPE_DEFINITION,
+  [Kind.INPUT_OBJECT_TYPE_EXTENSION]: Kind.INPUT_OBJECT_TYPE_DEFINITION
 };
 
 // Subgraph SDL commonly uses `extend type Query { … }` without defining a
@@ -127,9 +127,9 @@ function convertBaselessExtensions(documents: DocumentNode[]): DocumentNode[] {
         changed = true;
         return {
           ...definition,
-          kind: definitionKind,
+          kind: definitionKind
         } as unknown as DefinitionNode;
-      },
+      }
     );
     return changed ? { kind: Kind.DOCUMENT, definitions } : document;
   });
@@ -156,7 +156,7 @@ function collectDefinedNames(documents: readonly DocumentNode[]): DefinedNames {
 }
 
 function isTypeDefinition(
-  definition: DefinitionNode,
+  definition: DefinitionNode
 ): definition is DefinitionNode & { name: { value: string } } {
   switch (definition.kind) {
     case Kind.SCALAR_TYPE_DEFINITION:
@@ -173,7 +173,7 @@ function isTypeDefinition(
 
 function isMissing(
   definition: DefinitionNode,
-  provided: DefinedNames,
+  provided: DefinedNames
 ): boolean {
   if (definition.kind === Kind.DIRECTIVE_DEFINITION) {
     return !provided.directives.has(definition.name.value);

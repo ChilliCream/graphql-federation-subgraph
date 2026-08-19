@@ -18,7 +18,7 @@ export const typeDefs = /* GraphQL */ `
 
 const products = [
   { id: "1", sku: "A-1", name: "Chair" },
-  { id: "2", sku: "B-2", name: "Table" },
+  { id: "2", sku: "B-2", name: "Table" }
 ];
 
 export const resolvers = {
@@ -26,8 +26,8 @@ export const resolvers = {
     productById: (_parent: unknown, args: { id: string }) =>
       products.find((product) => product.id === args.id),
     productBySku: (_parent: unknown, args: { sku: string }) =>
-      products.find((product) => product.sku === args.sku),
-  },
+      products.find((product) => product.sku === args.sku)
+  }
 };
 
 export const testQuery = /* GraphQL */ `
@@ -44,20 +44,20 @@ export const testQuery = /* GraphQL */ `
 
 export const expectedData = {
   productById: { id: "1", name: "Chair" },
-  productBySku: { name: "Table" },
+  productBySku: { name: "Table" }
 };
 
 export async function postGraphQL(
   url: string,
-  query: string = testQuery,
+  query: string = testQuery
 ): Promise<{ data?: unknown; errors?: unknown }> {
   const response = await fetch(url, {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      accept: "application/graphql-response+json, application/json",
+      accept: "application/graphql-response+json, application/json"
     },
-    body: JSON.stringify({ query }),
+    body: JSON.stringify({ query })
   });
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}: ${await response.text()}`);

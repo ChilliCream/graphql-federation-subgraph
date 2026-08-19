@@ -10,7 +10,7 @@ describe("@apollo/server", () => {
 
   beforeAll(async () => {
     server = new ApolloServer({
-      schema: buildSubgraphSchema({ typeDefs, resolvers }),
+      schema: buildSubgraphSchema({ typeDefs, resolvers })
     });
     ({ url } = await startStandaloneServer(server, { listen: { port: 0 } }));
   });

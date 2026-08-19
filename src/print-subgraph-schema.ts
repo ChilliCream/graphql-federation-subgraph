@@ -30,7 +30,7 @@ export interface PrintSubgraphSchemaOptions {
  */
 export function printSubgraphSchema(
   schema: GraphQLSchema,
-  options: PrintSubgraphSchemaOptions = {},
+  options: PrintSubgraphSchemaOptions = {}
 ): string {
   const document = getDocumentNodeFromSchema(schema);
 
@@ -57,7 +57,7 @@ for (const definition of federationTypeDefs.definitions) {
   ) {
     specDefinitionSDL.set(
       `${definition.kind}:${definition.name.value}`,
-      print(definition),
+      print(definition)
     );
   }
 }
@@ -70,7 +70,7 @@ function isSpecDefinition(definition: DefinitionNode): boolean {
     return false;
   }
   const expected = specDefinitionSDL.get(
-    `${definition.kind}:${definition.name.value}`,
+    `${definition.kind}:${definition.name.value}`
   );
   if (expected === undefined) {
     return false;

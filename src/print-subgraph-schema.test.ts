@@ -47,11 +47,11 @@ describe("printSubgraphSchema", () => {
 
   it("produces self-contained SDL with includeFederationDefinitions", () => {
     const output = printSubgraphSchema(buildSubgraphSchema({ typeDefs: sdl }), {
-      includeFederationDefinitions: true,
+      includeFederationDefinitions: true
     });
 
     expect(output).toContain(
-      "directive @key(fields: FieldSelectionSet!) repeatable on OBJECT | INTERFACE",
+      "directive @key(fields: FieldSelectionSet!) repeatable on OBJECT | INTERFACE"
     );
     expect(output).toContain("scalar FieldSelectionMap");
 
@@ -77,8 +77,8 @@ describe("printSubgraphSchema", () => {
           type Product @key(fields: "id") {
             id: ID!
           }
-        `,
-      }),
+        `
+      })
     );
     expect(custom).toContain("schema {");
     expect(custom).toContain("query: QueryRoot");
@@ -99,12 +99,12 @@ describe("printSubgraphSchema", () => {
           type Product @key(fields: "id", futureArg: "x") {
             id: ID!
           }
-        `,
-      }),
+        `
+      })
     );
 
     expect(output).toContain(
-      "directive @key(fields: FieldSelectionSet!, futureArg: String) repeatable on OBJECT | INTERFACE",
+      "directive @key(fields: FieldSelectionSet!, futureArg: String) repeatable on OBJECT | INTERFACE"
     );
     expect(output).toContain('@key(fields: "id", futureArg: "x")');
     // The user's FieldSelectionSet copy matches the spec, so it is still omitted.
@@ -114,7 +114,7 @@ describe("printSubgraphSchema", () => {
     expect(validateSchema(rebuilt)).toEqual([]);
     expect(rebuilt.getDirective("key")?.args.map((arg) => arg.name)).toEqual([
       "fields",
-      "futureArg",
+      "futureArg"
     ]);
     expect(printSubgraphSchema(rebuilt)).toEqual(output);
   });
@@ -132,8 +132,8 @@ describe("printSubgraphSchema", () => {
           type User @key(fields: "id") {
             id: ID!
           }
-        `,
-      }),
+        `
+      })
     );
 
     expect(output).not.toContain("directive @lookup");
@@ -153,8 +153,8 @@ describe("printSubgraphSchema", () => {
           type Product @key(fields: "id") {
             id: ID!
           }
-        `,
-      }),
+        `
+      })
     );
 
     expect(output).toContain("directive @mine on FIELD_DEFINITION");

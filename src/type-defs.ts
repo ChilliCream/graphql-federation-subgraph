@@ -3,7 +3,7 @@ import {
   parse,
   type DocumentNode,
   type GraphQLDirective,
-  type GraphQLScalarType,
+  type GraphQLScalarType
 } from "graphql";
 
 /**
@@ -79,7 +79,7 @@ export const federationDirectiveNames: readonly string[] = [
   "external",
   "override",
   "interfaceObject",
-  "implement",
+  "implement"
 ];
 
 /**
@@ -87,7 +87,7 @@ export const federationDirectiveNames: readonly string[] = [
  */
 export const federationScalarNames: readonly string[] = [
   "FieldSelectionMap",
-  "FieldSelectionSet",
+  "FieldSelectionSet"
 ];
 
 const definitionsSchema = buildASTSchema(federationTypeDefs);
@@ -159,7 +159,7 @@ export const federationDirectives: readonly GraphQLDirective[] = [
   externalDirective,
   overrideDirective,
   interfaceObjectDirective,
-  implementDirective,
+  implementDirective
 ];
 
 /** The `FieldSelectionMap` scalar used by `@is` and `@require`. */
