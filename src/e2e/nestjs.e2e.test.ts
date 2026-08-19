@@ -1,13 +1,13 @@
-import 'reflect-metadata';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { Server } from 'node:http';
-import type { AddressInfo } from 'node:net';
-import { Module, type INestApplication } from '@nestjs/common';
-import { NestFactory } from '@nestjs/core';
-import { GraphQLModule } from '@nestjs/graphql';
-import { ApolloDriver, type ApolloDriverConfig } from '@nestjs/apollo';
-import { federationTypeDefsSDL } from '../index.js';
-import { expectedData, postGraphQL, resolvers, typeDefs } from './fixture.js';
+import "reflect-metadata";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import type { Server } from "node:http";
+import type { AddressInfo } from "node:net";
+import { Module, type INestApplication } from "@nestjs/common";
+import { NestFactory } from "@nestjs/core";
+import { GraphQLModule } from "@nestjs/graphql";
+import { ApolloDriver, type ApolloDriverConfig } from "@nestjs/apollo";
+import { federationTypeDefsSDL } from "../index.js";
+import { expectedData, postGraphQL, resolvers, typeDefs } from "./fixture.js";
 
 // Schema-first NestJS: the federation definitions are contributed as plain
 // typeDefs next to the application's own SDL. The @Module decorator is
@@ -18,20 +18,20 @@ Module({
   imports: [
     GraphQLModule.forRoot<ApolloDriverConfig>({
       driver: ApolloDriver,
-      typeDefs: [federationTypeDefsSDL, typeDefs].join('\n\n'),
+      typeDefs: [federationTypeDefsSDL, typeDefs].join("\n\n"),
       resolvers,
       playground: false,
     }),
   ],
 })(AppModule);
 
-describe('@nestjs/graphql (ApolloDriver, schema-first)', () => {
+describe("@nestjs/graphql (ApolloDriver, schema-first)", () => {
   let app: INestApplication;
   let url: string;
 
   beforeAll(async () => {
     app = await NestFactory.create(AppModule, { logger: false });
-    await app.listen(0, '127.0.0.1');
+    await app.listen(0, "127.0.0.1");
     const httpServer = app.getHttpServer() as Server;
     const { port } = httpServer.address() as AddressInfo;
     url = `http://127.0.0.1:${port}/graphql`;
@@ -39,7 +39,7 @@ describe('@nestjs/graphql (ApolloDriver, schema-first)', () => {
 
   afterAll(() => app.close());
 
-  it('serves the subgraph schema over HTTP', async () => {
+  it("serves the subgraph schema over HTTP", async () => {
     const result = await postGraphQL(url);
     expect(result.errors).toBeUndefined();
     expect(result.data).toEqual(expectedData);

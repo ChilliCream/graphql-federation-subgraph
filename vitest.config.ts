@@ -1,4 +1,4 @@
-import { defineConfig } from 'vitest/config';
+import { defineConfig } from "vitest/config";
 
 // graphql@16 ships CJS + ESM entry points without an "exports" map. Vite
 // resolves `graphql` to the ESM build for test files while Node loads the CJS
@@ -7,7 +7,7 @@ import { defineConfig } from 'vitest/config';
 // errors. Pin the test runner to the CJS build that Node uses.
 export default defineConfig({
   resolve: {
-    alias: [{ find: /^graphql$/, replacement: 'graphql/index.js' }],
+    alias: [{ find: /^graphql$/, replacement: "graphql/index.js" }],
   },
   test: {
     // The e2e tests boot real HTTP servers (NestJS in particular takes a

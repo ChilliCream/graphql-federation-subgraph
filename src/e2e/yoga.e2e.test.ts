@@ -1,11 +1,11 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { createServer, type Server } from 'node:http';
-import type { AddressInfo } from 'node:net';
-import { createYoga } from 'graphql-yoga';
-import { buildSubgraphSchema } from '../index.js';
-import { expectedData, postGraphQL, resolvers, typeDefs } from './fixture.js';
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { createServer, type Server } from "node:http";
+import type { AddressInfo } from "node:net";
+import { createYoga } from "graphql-yoga";
+import { buildSubgraphSchema } from "../index.js";
+import { expectedData, postGraphQL, resolvers, typeDefs } from "./fixture.js";
 
-describe('graphql-yoga', () => {
+describe("graphql-yoga", () => {
   let server: Server;
   let url: string;
 
@@ -26,7 +26,7 @@ describe('graphql-yoga', () => {
       ),
   );
 
-  it('serves the subgraph schema over HTTP', async () => {
+  it("serves the subgraph schema over HTTP", async () => {
     const result = await postGraphQL(url);
     expect(result.errors).toBeUndefined();
     expect(result.data).toEqual(expectedData);

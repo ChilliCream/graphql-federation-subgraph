@@ -4,7 +4,7 @@ import {
   type DocumentNode,
   type GraphQLDirective,
   type GraphQLScalarType,
-} from 'graphql';
+} from "graphql";
 
 /**
  * The SDL of every directive and scalar defined by the GraphQL Composite
@@ -68,26 +68,26 @@ export const federationTypeDefs: DocumentNode = parse(federationTypeDefsSDL);
  * provisional `interfaceObject` and `implement` from spec PR #233.
  */
 export const federationDirectiveNames: readonly string[] = [
-  'lookup',
-  'internal',
-  'inaccessible',
-  'is',
-  'require',
-  'key',
-  'shareable',
-  'provides',
-  'external',
-  'override',
-  'interfaceObject',
-  'implement',
+  "lookup",
+  "internal",
+  "inaccessible",
+  "is",
+  "require",
+  "key",
+  "shareable",
+  "provides",
+  "external",
+  "override",
+  "interfaceObject",
+  "implement",
 ];
 
 /**
  * The names of the scalars the federation directives depend on.
  */
 export const federationScalarNames: readonly string[] = [
-  'FieldSelectionMap',
-  'FieldSelectionSet',
+  "FieldSelectionMap",
+  "FieldSelectionSet",
 ];
 
 const definitionsSchema = buildASTSchema(federationTypeDefs);
@@ -109,36 +109,38 @@ function getScalar(name: string): GraphQLScalarType {
 }
 
 /** Marks a field as an entity lookup the distributed executor may use. */
-export const lookupDirective: GraphQLDirective = getDirective('lookup');
+export const lookupDirective: GraphQLDirective = getDirective("lookup");
 /** Declares types/fields that are local to this source schema and hidden from the composite schema. */
-export const internalDirective: GraphQLDirective = getDirective('internal');
+export const internalDirective: GraphQLDirective = getDirective("internal");
 /** Hides a schema member from the client-facing composite schema, globally. */
-export const inaccessibleDirective: GraphQLDirective = getDirective('inaccessible');
+export const inaccessibleDirective: GraphQLDirective =
+  getDirective("inaccessible");
 /** Maps a lookup argument to a field of the entity the lookup resolves. */
-export const isDirective: GraphQLDirective = getDirective('is');
+export const isDirective: GraphQLDirective = getDirective("is");
 /** Declares an argument whose value the executor resolves from other source schemas. */
-export const requireDirective: GraphQLDirective = getDirective('require');
+export const requireDirective: GraphQLDirective = getDirective("require");
 /** Designates a stable key that identifies an entity across source schemas. */
-export const keyDirective: GraphQLDirective = getDirective('key');
+export const keyDirective: GraphQLDirective = getDirective("key");
 /** Allows a field (or all fields of a type) to be contributed by multiple source schemas. */
-export const shareableDirective: GraphQLDirective = getDirective('shareable');
+export const shareableDirective: GraphQLDirective = getDirective("shareable");
 /** Declares subfields of the return type this field can resolve locally. */
-export const providesDirective: GraphQLDirective = getDirective('provides');
+export const providesDirective: GraphQLDirective = getDirective("provides");
 /** Marks a field this source schema recognizes but does not resolve itself. */
-export const externalDirective: GraphQLDirective = getDirective('external');
+export const externalDirective: GraphQLDirective = getDirective("external");
 /** Migrates a field from another source schema to this one. */
-export const overrideDirective: GraphQLDirective = getDirective('override');
+export const overrideDirective: GraphQLDirective = getDirective("override");
 /**
  * Marks an object type as a stand-in for an interface defined in another
  * source schema. Provisional — from spec PR #233, may change before merge.
  */
-export const interfaceObjectDirective: GraphQLDirective = getDirective('interfaceObject');
+export const interfaceObjectDirective: GraphQLDirective =
+  getDirective("interfaceObject");
 /**
  * Marks a field as an explicit replacement for an implementation projected
  * from an `@interfaceObject` stand-in. Provisional — from spec PR #233, may
  * change before merge.
  */
-export const implementDirective: GraphQLDirective = getDirective('implement');
+export const implementDirective: GraphQLDirective = getDirective("implement");
 
 /**
  * All federation directives as `GraphQLDirective` instances, for code-first
@@ -161,6 +163,8 @@ export const federationDirectives: readonly GraphQLDirective[] = [
 ];
 
 /** The `FieldSelectionMap` scalar used by `@is` and `@require`. */
-export const fieldSelectionMapScalar: GraphQLScalarType = getScalar('FieldSelectionMap');
+export const fieldSelectionMapScalar: GraphQLScalarType =
+  getScalar("FieldSelectionMap");
 /** The `FieldSelectionSet` scalar used by `@key` and `@provides`. */
-export const fieldSelectionSetScalar: GraphQLScalarType = getScalar('FieldSelectionSet');
+export const fieldSelectionSetScalar: GraphQLScalarType =
+  getScalar("FieldSelectionSet");

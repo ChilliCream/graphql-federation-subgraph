@@ -17,8 +17,8 @@ export const typeDefs = /* GraphQL */ `
 `;
 
 const products = [
-  { id: '1', sku: 'A-1', name: 'Chair' },
-  { id: '2', sku: 'B-2', name: 'Table' },
+  { id: "1", sku: "A-1", name: "Chair" },
+  { id: "2", sku: "B-2", name: "Table" },
 ];
 
 export const resolvers = {
@@ -43,8 +43,8 @@ export const testQuery = /* GraphQL */ `
 `;
 
 export const expectedData = {
-  productById: { id: '1', name: 'Chair' },
-  productBySku: { name: 'Table' },
+  productById: { id: "1", name: "Chair" },
+  productBySku: { name: "Table" },
 };
 
 export async function postGraphQL(
@@ -52,10 +52,10 @@ export async function postGraphQL(
   query: string = testQuery,
 ): Promise<{ data?: unknown; errors?: unknown }> {
   const response = await fetch(url, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'content-type': 'application/json',
-      accept: 'application/graphql-response+json, application/json',
+      "content-type": "application/json",
+      accept: "application/graphql-response+json, application/json",
     },
     body: JSON.stringify({ query }),
   });

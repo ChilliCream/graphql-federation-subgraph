@@ -127,7 +127,7 @@ Code-first (decorator-based) schemas need directive support from the schema buil
 
 ## Exporting the schema for composition
 
-Composition tooling needs your schema *with the federation directives applied* — which the standard `printSchema` from graphql-js silently drops. Use `printSubgraphSchema` instead:
+Composition tooling needs your schema _with the federation directives applied_ — which the standard `printSchema` from graphql-js silently drops. Use `printSubgraphSchema` instead:
 
 ```ts
 import { writeFileSync } from 'node:fs';
@@ -140,20 +140,20 @@ By default the output contains only your own definitions with the directives app
 
 ## Directive reference
 
-| Directive | Definition | Purpose |
-| --- | --- | --- |
-| `@lookup` | `on FIELD_DEFINITION` | Marks a field the distributed executor can use to resolve an entity by key. |
-| `@internal` | `on OBJECT \| FIELD_DEFINITION` | Hides a member from the composite schema and from merging; usable only by the executor (e.g. internal lookups). |
-| `@inaccessible` | `on FIELD_DEFINITION \| OBJECT \| …` | Globally hides a member from the client-facing composite schema. |
-| `@is(field: FieldSelectionMap!)` | `on ARGUMENT_DEFINITION` | Maps a lookup argument to fields of the entity it resolves. |
-| `@require(field: FieldSelectionMap!)` | `on ARGUMENT_DEFINITION` | Declares an argument the executor fulfills with data from other source schemas. |
-| `@key(fields: FieldSelectionSet!)` | `repeatable on OBJECT \| INTERFACE` | Declares a stable key that identifies an entity across source schemas. |
-| `@shareable` | `repeatable on OBJECT \| FIELD_DEFINITION` | Allows a field to be contributed by multiple source schemas. |
-| `@provides(fields: FieldSelectionSet!)` | `on FIELD_DEFINITION` | Declares subfields of the return type this field can resolve locally. |
-| `@external` | `on FIELD_DEFINITION` | Marks a field recognized but not resolved by this source schema. |
-| `@override(from: String!)` | `on FIELD_DEFINITION` | Migrates a field from another source schema to this one. |
-| `@interfaceObject` ⚠️ | `on OBJECT` | Object type standing in for an interface owned by another source schema. |
-| `@implement` ⚠️ | `on FIELD_DEFINITION` | Explicit replacement for a field projected from an `@interfaceObject` stand-in. |
+| Directive                               | Definition                                 | Purpose                                                                                                         |
+| --------------------------------------- | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| `@lookup`                               | `on FIELD_DEFINITION`                      | Marks a field the distributed executor can use to resolve an entity by key.                                     |
+| `@internal`                             | `on OBJECT \| FIELD_DEFINITION`            | Hides a member from the composite schema and from merging; usable only by the executor (e.g. internal lookups). |
+| `@inaccessible`                         | `on FIELD_DEFINITION \| OBJECT \| …`       | Globally hides a member from the client-facing composite schema.                                                |
+| `@is(field: FieldSelectionMap!)`        | `on ARGUMENT_DEFINITION`                   | Maps a lookup argument to fields of the entity it resolves.                                                     |
+| `@require(field: FieldSelectionMap!)`   | `on ARGUMENT_DEFINITION`                   | Declares an argument the executor fulfills with data from other source schemas.                                 |
+| `@key(fields: FieldSelectionSet!)`      | `repeatable on OBJECT \| INTERFACE`        | Declares a stable key that identifies an entity across source schemas.                                          |
+| `@shareable`                            | `repeatable on OBJECT \| FIELD_DEFINITION` | Allows a field to be contributed by multiple source schemas.                                                    |
+| `@provides(fields: FieldSelectionSet!)` | `on FIELD_DEFINITION`                      | Declares subfields of the return type this field can resolve locally.                                           |
+| `@external`                             | `on FIELD_DEFINITION`                      | Marks a field recognized but not resolved by this source schema.                                                |
+| `@override(from: String!)`              | `on FIELD_DEFINITION`                      | Migrates a field from another source schema to this one.                                                        |
+| `@interfaceObject` ⚠️                   | `on OBJECT`                                | Object type standing in for an interface owned by another source schema.                                        |
+| `@implement` ⚠️                         | `on FIELD_DEFINITION`                      | Explicit replacement for a field projected from an `@interfaceObject` stand-in.                                 |
 
 ⚠️ `@interfaceObject` and `@implement` are **provisional**: they come from the open spec PR [graphql/composite-schemas-spec#233](https://github.com/graphql/composite-schemas-spec/pull/233) and their names or semantics may change before the PR is merged.
 
@@ -168,13 +168,13 @@ By default the output contains only your own definitions with the directives app
 
 ## Comparison with `@apollo/subgraph`
 
-|  | `graphql-federation-subgraph` | `@apollo/subgraph` |
-| --- | --- | --- |
-| Specification | [Composite Schemas Spec](https://github.com/graphql/composite-schemas-spec) (GraphQL Foundation) | Apollo Federation |
-| Entity resolution | Ordinary `@lookup` fields with ordinary resolvers | `Query._entities` + `__resolveReference` |
-| Schema exposure | `printSubgraphSchema` → file for composition | Runtime `Query._service { sdl }` |
-| Injected runtime types | None | `_Service`, `_Entity`, `_Any`, `_service`, `_entities` |
-| Spec linking | None needed (bare directive names) | `@link` imports (Federation 2) |
+|                        | `graphql-federation-subgraph`                                                                    | `@apollo/subgraph`                                     |
+| ---------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------ |
+| Specification          | [Composite Schemas Spec](https://github.com/graphql/composite-schemas-spec) (GraphQL Foundation) | Apollo Federation                                      |
+| Entity resolution      | Ordinary `@lookup` fields with ordinary resolvers                                                | `Query._entities` + `__resolveReference`               |
+| Schema exposure        | `printSubgraphSchema` → file for composition                                                     | Runtime `Query._service { sdl }`                       |
+| Injected runtime types | None                                                                                             | `_Service`, `_Entity`, `_Any`, `_service`, `_entities` |
+| Spec linking           | None needed (bare directive names)                                                               | `@link` imports (Federation 2)                         |
 
 ## License
 
