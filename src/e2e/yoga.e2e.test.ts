@@ -11,7 +11,7 @@ describe("graphql-yoga", () => {
 
   beforeAll(async () => {
     const yoga = createYoga({
-      schema: buildSubgraphSchema({ typeDefs, resolvers })
+      schema: buildSubgraphSchema({ typeDefs, resolvers }),
     });
     server = createServer((req, res) => void yoga(req, res));
     await new Promise<void>((resolve) => server.listen(0, resolve));
@@ -22,8 +22,8 @@ describe("graphql-yoga", () => {
   afterAll(
     () =>
       new Promise<void>((resolve, reject) =>
-        server.close((error) => (error ? reject(error) : resolve()))
-      )
+        server.close((error) => (error ? reject(error) : resolve())),
+      ),
   );
 
   it("serves the subgraph schema over HTTP", async () => {

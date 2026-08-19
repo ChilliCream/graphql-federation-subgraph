@@ -24,7 +24,7 @@ const productSDL = /* GraphQL */ `
 
 const products = [
   { id: "1", sku: "A-1", name: "Chair", dimension: { size: "L", weight: 10 } },
-  { id: "2", sku: "B-2", name: "Table", dimension: { size: "XL", weight: 42 } }
+  { id: "2", sku: "B-2", name: "Table", dimension: { size: "XL", weight: 42 } },
 ];
 
 const productResolvers = {
@@ -33,8 +33,8 @@ const productResolvers = {
       products.find((product) => product.id === args.id),
     productBySku: (_root: unknown, args: { sku: string }) =>
       products.find((product) => product.sku === args.sku),
-    products: () => products
-  }
+    products: () => products,
+  },
 };
 
 describe("buildSubgraphSchema", () => {
@@ -44,7 +44,7 @@ describe("buildSubgraphSchema", () => {
 
     const product = schema.getType("Product") as GraphQLObjectType;
     const keys = product.astNode?.directives?.filter(
-      (d) => d.name.value === "key"
+      (d) => d.name.value === "key",
     );
     expect(keys).toHaveLength(2);
     expect(schema.getDirective("key")).toBeDefined();
@@ -84,7 +84,7 @@ describe("buildSubgraphSchema", () => {
           size: String @external
           weight: Float
         }
-      `
+      `,
     });
     expect(validateSchema(schema)).toEqual([]);
   });
@@ -92,19 +92,19 @@ describe("buildSubgraphSchema", () => {
   it("executes queries with regular resolvers (no reference resolvers needed)", async () => {
     const schema = buildSubgraphSchema({
       typeDefs: productSDL,
-      resolvers: productResolvers
+      resolvers: productResolvers,
     });
 
     const result = await graphql({
       schema,
       source:
-        '{ productById(id: "1") { id name } productBySku(sku: "B-2") { name } }'
+        '{ productById(id: "1") { id name } productBySku(sku: "B-2") { name } }',
     });
 
     expect(result.errors).toBeUndefined();
     expect(result.data).toEqual({
       productById: { id: "1", name: "Chair" },
-      productBySku: { name: "Table" }
+      productBySku: { name: "Table" },
     });
   });
 
@@ -112,18 +112,18 @@ describe("buildSubgraphSchema", () => {
     const schema = buildSubgraphSchema({
       typeDefs: [
         parse("type Query { productById(id: ID!): Product @lookup }"),
-        ['type Product @key(fields: "id") { id: ID! }']
-      ]
+        ['type Product @key(fields: "id") { id: ID! }'],
+      ],
     });
     expect(validateSchema(schema)).toEqual([]);
     expect(
-      (schema.getType("Product") as GraphQLObjectType).getFields().id
+      (schema.getType("Product") as GraphQLObjectType).getFields().id,
     ).toBeDefined();
   });
 
   it("rejects unsupported typeDefs values", () => {
     expect(() =>
-      buildSubgraphSchema({ typeDefs: 42 as unknown as string })
+      buildSubgraphSchema({ typeDefs: 42 as unknown as string }),
     ).toThrow(TypeError);
   });
 
@@ -141,7 +141,7 @@ describe("buildSubgraphSchema", () => {
         type Product @key(fields: "id", futureArg: "x") {
           id: ID!
         }
-      `
+      `,
     });
 
     expect(validateSchema(schema)).toEqual([]);
@@ -163,16 +163,16 @@ describe("buildSubgraphSchema", () => {
       resolvers: {
         Query: {
           productById: (_root: unknown, args: { id: string }) => ({
-            id: args.id
-          })
-        }
-      }
+            id: args.id,
+          }),
+        },
+      },
     });
 
     expect(validateSchema(schema)).toEqual([]);
     const result = await graphql({
       schema,
-      source: '{ productById(id: "7") { id } }'
+      source: '{ productById(id: "7") { id } }',
     });
     expect(result.errors).toBeUndefined();
     expect(result.data).toEqual({ productById: { id: "7" } });
@@ -182,8 +182,8 @@ describe("buildSubgraphSchema", () => {
     const schema = buildSubgraphSchema({
       typeDefs: [
         "extend type Query { a: String }",
-        "extend type Query { b: String }"
-      ]
+        "extend type Query { b: String }",
+      ],
     });
 
     expect(validateSchema(schema)).toEqual([]);
@@ -204,7 +204,7 @@ describe("buildSubgraphSchema", () => {
         extend type Product @key(fields: "id") {
           name: String
         }
-      `
+      `,
     });
 
     expect(validateSchema(schema)).toEqual([]);
@@ -219,8 +219,8 @@ describe("buildSubgraphSchema", () => {
           type Query {
             field: String @key(fields: "id")
           }
-        `
-      })
+        `,
+      }),
     ).toThrow(/@key/);
   });
 });

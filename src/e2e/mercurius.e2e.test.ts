@@ -12,7 +12,7 @@ describe("mercurius", () => {
   beforeAll(async () => {
     app = Fastify();
     app.register(mercurius, {
-      schema: buildSubgraphSchema({ typeDefs, resolvers })
+      schema: buildSubgraphSchema({ typeDefs, resolvers }),
     });
     await app.listen({ port: 0, host: "127.0.0.1" });
     const { port } = app.server.address() as AddressInfo;

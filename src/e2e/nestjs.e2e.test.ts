@@ -20,9 +20,9 @@ Module({
       driver: ApolloDriver,
       typeDefs: [federationTypeDefsSDL, typeDefs].join("\n\n"),
       resolvers,
-      playground: false
-    })
-  ]
+      playground: false,
+    }),
+  ],
 })(AppModule);
 
 describe("@nestjs/graphql (ApolloDriver, schema-first)", () => {
