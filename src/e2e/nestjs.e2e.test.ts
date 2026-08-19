@@ -7,7 +7,13 @@ import { NestFactory } from "@nestjs/core";
 import { GraphQLModule } from "@nestjs/graphql";
 import { ApolloDriver, type ApolloDriverConfig } from "@nestjs/apollo";
 import { federationTypeDefsSDL } from "../index.js";
-import { expectedData, postGraphQL, resolvers, typeDefs } from "./fixture.js";
+import {
+  expectedData,
+  fetchIntrospectionSdl,
+  postGraphQL,
+  resolvers,
+  typeDefs,
+} from "./fixture.js";
 
 // Schema-first NestJS: the federation definitions are contributed as plain
 // typeDefs next to the application's own SDL. The @Module decorator is
@@ -43,5 +49,11 @@ describe("@nestjs/graphql (ApolloDriver, schema-first)", () => {
     const result = await postGraphQL(url);
     expect(result.errors).toBeUndefined();
     expect(result.data).toEqual(expectedData);
+  });
+
+  it("serves the federation definitions via introspection", async () => {
+    await expect(await fetchIntrospectionSdl(url)).toMatchFileSnapshot(
+      "./__snapshots__/introspection.graphql",
+    );
   });
 });

@@ -1,8 +1,16 @@
 /**
  * Shared schema, resolvers, and HTTP helpers for the server e2e tests. Every
  * server from the README boots with this subgraph schema and must answer the
- * same query the same way.
+ * same query — and expose the same SDL through introspection — the same way.
  */
+import {
+  buildClientSchema,
+  getIntrospectionQuery,
+  lexicographicSortSchema,
+  printSchema,
+  type IntrospectionQuery,
+} from "graphql";
+
 export const typeDefs = /* GraphQL */ `
   type Query {
     productById(id: ID!): Product @lookup
@@ -46,6 +54,30 @@ export const expectedData = {
   productById: { id: "1", name: "Chair" },
   productBySku: { name: "Table" },
 };
+
+/**
+ * Fetches the schema a server exposes through standard introspection, as SDL.
+ * Every server is checked against the single shared snapshot in
+ * `__snapshots__/introspection.graphql`; the schema is sorted
+ * lexicographically so servers that assemble it themselves from SDL (NestJS
+ * schema-first) print the same text regardless of definition order.
+ */
+export async function fetchIntrospectionSdl(url: string): Promise<string> {
+  // directiveIsRepeatable is off by default but @key/@shareable are
+  // repeatable; without it the round-tripped SDL would drop `repeatable`.
+  const result = await postGraphQL(
+    url,
+    getIntrospectionQuery({ directiveIsRepeatable: true }),
+  );
+  if (result.errors !== undefined || result.data === undefined) {
+    throw new Error(`Introspection failed: ${JSON.stringify(result.errors)}`);
+  }
+  return printSchema(
+    lexicographicSortSchema(
+      buildClientSchema(result.data as unknown as IntrospectionQuery),
+    ),
+  );
+}
 
 export async function postGraphQL(
   url: string,
