@@ -1,0 +1,38 @@
+directive @external on FIELD_DEFINITION
+
+directive @implement on FIELD_DEFINITION
+
+directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
+
+directive @interfaceObject on OBJECT
+
+directive @internal on FIELD_DEFINITION | OBJECT
+
+directive @is(field: FieldSelectionMap!) on ARGUMENT_DEFINITION
+
+directive @key(fields: FieldSelectionSet!) repeatable on INTERFACE | OBJECT
+
+directive @lookup on FIELD_DEFINITION
+
+directive @override(from: String!) on FIELD_DEFINITION
+
+directive @provides(fields: FieldSelectionSet!) on FIELD_DEFINITION
+
+directive @require(field: FieldSelectionMap!) on ARGUMENT_DEFINITION
+
+directive @shareable repeatable on FIELD_DEFINITION | OBJECT
+
+scalar FieldSelectionMap
+
+scalar FieldSelectionSet
+
+type Product {
+  id: ID!
+  name: String!
+  sku: String!
+}
+
+type Query {
+  productById(id: ID!): Product
+  productBySku(sku: String!): Product
+}
