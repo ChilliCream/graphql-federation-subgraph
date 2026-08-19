@@ -3,7 +3,12 @@
   "version": "0.0.0",
   "description": "GraphQL Federation Spec directives for any TypeScript GraphQL server — a server-agnostic alternative to @apollo/subgraph.",
   "license": "MIT",
-  "author": "ChilliCream",
+  "homepage": "https://chillicream.com",
+  "author": {
+    "name": "ChilliCream",
+    "url": "https://chillicream.com",
+    "email": "info@chillicream.com"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ChilliCream/graphql-federation-subgraph.git"
