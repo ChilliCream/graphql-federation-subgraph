@@ -1,5 +1,5 @@
+import { graphql, GraphQLObjectType, parse, validateSchema } from "graphql";
 import { describe, expect, it } from "vitest";
-import { graphql, parse, validateSchema, GraphQLObjectType } from "graphql";
 import { buildSubgraphSchema } from "./index.js";
 
 const productSDL = /* GraphQL */ `

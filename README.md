@@ -27,7 +27,7 @@ npm install graphql-federation-subgraph graphql
 ## Quick start
 
 ```ts
-import { buildSubgraphSchema } from 'graphql-federation-subgraph';
+import { buildSubgraphSchema } from "graphql-federation-subgraph";
 
 const typeDefs = /* GraphQL */ `
   type Query {
@@ -43,8 +43,8 @@ const typeDefs = /* GraphQL */ `
 `;
 
 const products = [
-  { id: '1', sku: 'A-1', name: 'Chair' },
-  { id: '2', sku: 'B-2', name: 'Table' },
+  { id: "1", sku: "A-1", name: "Chair" },
+  { id: "2", sku: "B-2", name: "Table" },
 ];
 
 const resolvers = {
@@ -64,8 +64,8 @@ All federation directive and scalar definitions are added automatically; definit
 ### GraphQL Yoga
 
 ```ts
-import { createServer } from 'node:http';
-import { createYoga } from 'graphql-yoga';
+import { createServer } from "node:http";
+import { createYoga } from "graphql-yoga";
 
 const yoga = createYoga({ schema });
 createServer(yoga).listen(4000);
@@ -74,8 +74,8 @@ createServer(yoga).listen(4000);
 ### Apollo Server
 
 ```ts
-import { ApolloServer } from '@apollo/server';
-import { startStandaloneServer } from '@apollo/server/standalone';
+import { ApolloServer } from "@apollo/server";
+import { startStandaloneServer } from "@apollo/server/standalone";
 
 const server = new ApolloServer({ schema });
 await startStandaloneServer(server, { listen: { port: 4000 } });
@@ -84,8 +84,8 @@ await startStandaloneServer(server, { listen: { port: 4000 } });
 ### Mercurius (Fastify)
 
 ```ts
-import Fastify from 'fastify';
-import mercurius from 'mercurius';
+import Fastify from "fastify";
+import mercurius from "mercurius";
 
 const app = Fastify();
 app.register(mercurius, { schema });
@@ -95,8 +95,8 @@ await app.listen({ port: 4000 });
 ### graphql-http
 
 ```ts
-import { createHandler } from 'graphql-http/lib/use/http';
-import { createServer } from 'node:http';
+import { createHandler } from "graphql-http/lib/use/http";
+import { createServer } from "node:http";
 
 createServer(createHandler({ schema })).listen(4000);
 ```
@@ -106,16 +106,16 @@ createServer(createHandler({ schema })).listen(4000);
 With schema-first drivers, contribute the federation definitions alongside your own type definitions:
 
 ```ts
-import { Module } from '@nestjs/common';
-import { GraphQLModule } from '@nestjs/graphql';
-import { ApolloDriver, type ApolloDriverConfig } from '@nestjs/apollo';
-import { federationTypeDefsSDL } from 'graphql-federation-subgraph';
+import { Module } from "@nestjs/common";
+import { GraphQLModule } from "@nestjs/graphql";
+import { ApolloDriver, type ApolloDriverConfig } from "@nestjs/apollo";
+import { federationTypeDefsSDL } from "graphql-federation-subgraph";
 
 @Module({
   imports: [
     GraphQLModule.forRoot<ApolloDriverConfig>({
       driver: ApolloDriver,
-      typeDefs: [federationTypeDefsSDL, typeDefs].join('\n\n'),
+      typeDefs: [federationTypeDefsSDL, typeDefs].join("\n\n"),
       resolvers,
     }),
   ],
@@ -130,10 +130,10 @@ Code-first (decorator-based) schemas need directive support from the schema buil
 Composition tooling needs your schema _with the federation directives applied_ — which the standard `printSchema` from graphql-js silently drops. Use `printSubgraphSchema` instead:
 
 ```ts
-import { writeFileSync } from 'node:fs';
-import { printSubgraphSchema } from 'graphql-federation-subgraph';
+import { writeFileSync } from "node:fs";
+import { printSubgraphSchema } from "graphql-federation-subgraph";
 
-writeFileSync('products.graphql', printSubgraphSchema(schema));
+writeFileSync("products.graphql", printSubgraphSchema(schema));
 ```
 
 By default the output contains only your own definitions with the directives applied — the spec treats the federation directives and scalars as built-ins that composers already know, so the output round-trips cleanly through `buildSubgraphSchema`. Only definitions that structurally match the spec are omitted; if you customized one (say, `@key` with an extra argument, which the spec allows), it stays in the output. Pass `{ includeFederationDefinitions: true }` to emit self-contained SDL that plain `buildSchema` accepts.
