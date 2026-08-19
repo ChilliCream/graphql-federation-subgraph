@@ -15,6 +15,7 @@ import {
  * open spec PR https://github.com/graphql/composite-schemas-spec/pull/233 and
  * may still change before that PR is merged.
  */
+// eslint-disable-next-line @typescript-eslint/no-inferrable-types -- keeps the emitted declaration `string` instead of the full SDL literal type
 export const federationTypeDefsSDL: string = /* GraphQL */ `
   scalar FieldSelectionMap
 

@@ -13,7 +13,7 @@ describe('graphql-yoga', () => {
     const yoga = createYoga({
       schema: buildSubgraphSchema({ typeDefs, resolvers }),
     });
-    server = createServer(yoga);
+    server = createServer((req, res) => void yoga(req, res));
     await new Promise<void>((resolve) => server.listen(0, resolve));
     const { port } = server.address() as AddressInfo;
     url = `http://127.0.0.1:${port}/graphql`;

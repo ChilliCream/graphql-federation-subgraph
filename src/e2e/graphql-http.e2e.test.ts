@@ -10,9 +10,10 @@ describe('graphql-http', () => {
   let url: string;
 
   beforeAll(async () => {
-    server = createServer(
-      createHandler({ schema: buildSubgraphSchema({ typeDefs, resolvers }) }),
-    );
+    const handler = createHandler({
+      schema: buildSubgraphSchema({ typeDefs, resolvers }),
+    });
+    server = createServer((req, res) => void handler(req, res));
     await new Promise<void>((resolve) => server.listen(0, resolve));
     const { port } = server.address() as AddressInfo;
     url = `http://127.0.0.1:${port}/graphql`;

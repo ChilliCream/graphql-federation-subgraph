@@ -1,5 +1,6 @@
 import 'reflect-metadata';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { Module, type INestApplication } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
@@ -31,7 +32,8 @@ describe('@nestjs/graphql (ApolloDriver, schema-first)', () => {
   beforeAll(async () => {
     app = await NestFactory.create(AppModule, { logger: false });
     await app.listen(0, '127.0.0.1');
-    const { port } = app.getHttpServer().address() as AddressInfo;
+    const httpServer = app.getHttpServer() as Server;
+    const { port } = httpServer.address() as AddressInfo;
     url = `http://127.0.0.1:${port}/graphql`;
   });
 

@@ -19,8 +19,9 @@ import { federationTypeDefs } from './type-defs.js';
 export type SubgraphTypeSource =
   | string
   | DocumentNode
-  | ReadonlyArray<SubgraphTypeSource>;
+  | readonly SubgraphTypeSource[];
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- mirrors IExecutableSchemaDefinition's context default
 export interface BuildSubgraphSchemaOptions<TContext = any>
   extends Omit<IExecutableSchemaDefinition<TContext>, 'typeDefs'> {
   readonly typeDefs: SubgraphTypeSource;
@@ -38,6 +39,7 @@ export interface BuildSubgraphSchemaOptions<TContext = any>
  * The result is a plain `GraphQLSchema`, usable with any GraphQL server that
  * accepts one (GraphQL Yoga, Apollo Server, Mercurius, graphql-http, …).
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- mirrors IExecutableSchemaDefinition's context default
 export function buildSubgraphSchema<TContext = any>(
   options: BuildSubgraphSchemaOptions<TContext>,
 ): GraphQLSchema {
@@ -64,7 +66,9 @@ function normalizeTypeDefs(typeDefs: SubgraphTypeSource): DocumentNode[] {
     return [typeDefs];
   }
   if (Array.isArray(typeDefs)) {
-    return typeDefs.flatMap((entry) => normalizeTypeDefs(entry));
+    // Array.isArray narrows the readonly-array union to any[], so the entry
+    // type has to be restated.
+    return typeDefs.flatMap((entry: SubgraphTypeSource) => normalizeTypeDefs(entry));
   }
   throw new TypeError(
     'buildSubgraphSchema: `typeDefs` must be an SDL string, a DocumentNode, or an array of those.',
