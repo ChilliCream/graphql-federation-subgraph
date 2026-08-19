@@ -23,7 +23,7 @@ export type SubgraphTypeSource =
 
 export interface BuildSubgraphSchemaOptions<TContext = any>
   extends Omit<IExecutableSchemaDefinition<TContext>, 'typeDefs'> {
-  typeDefs: SubgraphTypeSource;
+  readonly typeDefs: SubgraphTypeSource;
 }
 
 /**
@@ -123,8 +123,8 @@ function convertBaselessExtensions(documents: DocumentNode[]): DocumentNode[] {
 }
 
 interface DefinedNames {
-  directives: Set<string>;
-  types: Set<string>;
+  readonly directives: Set<string>;
+  readonly types: Set<string>;
 }
 
 function collectDefinedNames(documents: readonly DocumentNode[]): DefinedNames {

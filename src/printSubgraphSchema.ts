@@ -19,7 +19,7 @@ export interface PrintSubgraphSchemaOptions {
    * argument, which the spec explicitly allows) is kept, so the printed SDL
    * always describes the schema faithfully.
    */
-  includeFederationDefinitions?: boolean;
+  readonly includeFederationDefinitions?: boolean;
 }
 
 /**
