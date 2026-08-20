@@ -69,9 +69,11 @@ export async function fetchIntrospectionSdl(url: string): Promise<string> {
     url,
     getIntrospectionQuery({ directiveIsRepeatable: true }),
   );
+
   if (result.errors !== undefined || result.data === undefined) {
     throw new Error(`Introspection failed: ${JSON.stringify(result.errors)}`);
   }
+
   return printSchema(
     lexicographicSortSchema(
       buildClientSchema(result.data as unknown as IntrospectionQuery),
@@ -91,8 +93,10 @@ export async function postGraphQL(
     },
     body: JSON.stringify({ query }),
   });
+
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}: ${await response.text()}`);
   }
+
   return (await response.json()) as { data?: unknown; errors?: unknown };
 }

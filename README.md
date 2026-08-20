@@ -2,11 +2,11 @@
 
 Federation directives from the [GraphQL Federation Spec](https://github.com/graphql/composite-schemas-spec) for **any** TypeScript/JavaScript GraphQL server.
 
-This package plays the same role for the Composite Schemas Spec that [`@apollo/subgraph`](https://www.npmjs.com/package/@apollo/subgraph) plays for Apollo Federation: it lets a service use the federation directives (`@key`, `@lookup`, `@shareable`, …) in its schema without defining them, and export its schema for composition. Unlike `@apollo/subgraph`, it is not tied to any particular server — the result is a plain `GraphQLSchema`, so it works with GraphQL Yoga, Apollo Server, Mercurius, `graphql-http`, and anything else that accepts one.
+This package plays the same role for the GraphQL Federation Spec that [`@apollo/subgraph`](https://www.npmjs.com/package/@apollo/subgraph) plays for Apollo Federation: it lets a service use the federation directives (`@key`, `@lookup`, `@shareable`, …) in its schema without defining them, and export its schema for composition. Unlike `@apollo/subgraph`, it is not tied to any particular server — the result is a plain `GraphQLSchema`, so it works with GraphQL Yoga, Apollo Server, Mercurius, `graphql-http`, and anything else that accepts one. It has zero runtime dependencies; `graphql` itself is the only peer dependency.
 
 ## Why there are no reference resolvers
 
-In Apollo Federation, a subgraph implements a side-channel protocol: the router calls `Query._entities` with opaque representations, and each entity needs a `__resolveReference` resolver. The Composite Schemas Spec has no such protocol. Entity resolution happens through **ordinary fields** annotated with `@lookup`:
+In Apollo Federation, a subgraph implements a side-channel protocol: the router calls `Query._entities` with opaque representations, and each entity needs a `__resolveReference` resolver. The GraphQL Federation Spec has no such protocol. Entity resolution happens through **ordinary fields** annotated with `@lookup`:
 
 ```graphql
 type Query {
@@ -159,7 +159,7 @@ By default the output contains only your own definitions with the directives app
 
 ## API
 
-- **`buildSubgraphSchema(options)`** — builds an executable `GraphQLSchema` from `typeDefs` (SDL string, `DocumentNode`, or nested arrays of either) and `resolvers`, injecting any federation definitions the document doesn't already define. Additional options are forwarded to [`makeExecutableSchema`](https://the-guild.dev/graphql/tools/docs/generate-schema).
+- **`buildSubgraphSchema(options)`** — builds an executable `GraphQLSchema` from `typeDefs` (SDL string, `DocumentNode`, or nested arrays of either) and `resolvers` (a map or array of maps), injecting any federation definitions the document doesn't already define. Resolver maps support field resolvers (plain functions or `{ resolve, subscribe }`), `__resolveType` / `__isTypeOf`, custom scalar configs or `GraphQLScalarType` instances, and enum internal values (`{ Color: { RED: "#f00" } }`). `assumeValid` / `assumeValidSDL` are forwarded to graphql-js.
 - **`printSubgraphSchema(schema, options?)`** — prints SDL including applied federation directives. `options.includeFederationDefinitions` (default `false`) controls whether the spec's directive/scalar definitions are emitted.
 - **`federationTypeDefs`** / **`federationTypeDefsSDL`** — the definitions as a `DocumentNode` / SDL string, for wiring into your own schema-building pipeline (e.g. `makeExecutableSchema({ typeDefs: [federationTypeDefs, typeDefs] })`).
 - **`federationDirectives`**, **`lookupDirective`**, **`keyDirective`**, … — `GraphQLDirective` instances for code-first schemas (`new GraphQLSchema({ …, directives: [...specifiedDirectives, ...federationDirectives] })`).
@@ -168,13 +168,13 @@ By default the output contains only your own definitions with the directives app
 
 ## Comparison with `@apollo/subgraph`
 
-|                        | `graphql-federation-subgraph`                                                                    | `@apollo/subgraph`                                     |
-| ---------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------ |
-| Specification          | [Composite Schemas Spec](https://github.com/graphql/composite-schemas-spec) (GraphQL Foundation) | Apollo Federation                                      |
-| Entity resolution      | Ordinary `@lookup` fields with ordinary resolvers                                                | `Query._entities` + `__resolveReference`               |
-| Schema exposure        | `printSubgraphSchema` → file for composition                                                     | Runtime `Query._service { sdl }`                       |
-| Injected runtime types | None                                                                                             | `_Service`, `_Entity`, `_Any`, `_service`, `_entities` |
-| Spec linking           | None needed (bare directive names)                                                               | `@link` imports (Federation 2)                         |
+|                        | `graphql-federation-subgraph`                                                                     | `@apollo/subgraph`                                     |
+| ---------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| Specification          | [GraphQL Federation Spec](https://github.com/graphql/composite-schemas-spec) (GraphQL Foundation) | Apollo Federation                                      |
+| Entity resolution      | Ordinary `@lookup` fields with ordinary resolvers                                                 | `Query._entities` + `__resolveReference`               |
+| Schema exposure        | `printSubgraphSchema` → file for composition                                                      | Runtime `Query._service { sdl }`                       |
+| Injected runtime types | None                                                                                              | `_Service`, `_Entity`, `_Any`, `_service`, `_entities` |
+| Spec linking           | None needed (bare directive names)                                                                | `@link` imports (Federation 2)                         |
 
 ## License
 

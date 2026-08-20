@@ -2,9 +2,10 @@ import { defineConfig } from "vitest/config";
 
 // graphql@16 ships CJS + ESM entry points without an "exports" map. Vite
 // resolves `graphql` to the ESM build for test files while Node loads the CJS
-// build for externalized dependencies (@graphql-tools/*), which produces two
-// module realms and "Cannot use GraphQLSchema from another module or realm"
-// errors. Pin the test runner to the CJS build that Node uses.
+// build for externalized dependencies (the e2e servers: @apollo/server,
+// graphql-yoga, mercurius, …), which produces two module realms and "Cannot
+// use GraphQLSchema from another module or realm" errors. Pin the test runner
+// to the CJS build that Node uses.
 export default defineConfig({
   resolve: {
     alias: [{ find: /^graphql$/, replacement: "graphql/index.js" }],
