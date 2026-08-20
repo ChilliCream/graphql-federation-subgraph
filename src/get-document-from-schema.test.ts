@@ -6,6 +6,7 @@ import {
   GraphQLObjectType,
   GraphQLSchema,
   GraphQLString,
+  parse,
   print,
   printSchema,
 } from "graphql";
@@ -113,10 +114,24 @@ describe("getDocumentFromSchema", () => {
       }),
     );
 
-    expect(print(document)).toMatchInlineSnapshot(`
-      "type Query {
-        a: String @meta(tags: ["a", "b"], weight: 1.5, flag: true, note: null, nested: {count: 1})
-      }"
-    `);
+    // The expected SDL is round-tripped through the installed printer so the
+    // comparison is exact on both graphql@16 and graphql@17, whose printers
+    // format object values differently ({count: 1} vs { count: 1 }).
+    expect(print(document)).toBe(
+      print(
+        parse(/* GraphQL */ `
+          type Query {
+            a: String
+              @meta(
+                tags: ["a", "b"]
+                weight: 1.5
+                flag: true
+                note: null
+                nested: { count: 1 }
+              )
+          }
+        `),
+      ),
+    );
   });
 });

@@ -1,5 +1,5 @@
 import {
-  GraphQLDeprecatedDirective,
+  DEFAULT_DEPRECATION_REASON,
   Kind,
   OperationTypeNode,
   astFromValue,
@@ -637,14 +637,12 @@ function untypedValueNode(value: unknown): ConstValueNode | undefined {
 
 // ─── Shared node helpers ─────────────────────────────────────────────────────
 
-const deprecationDefaultReason = GraphQLDeprecatedDirective.args.find(
-  (arg) => arg.name === "reason",
-)?.defaultValue;
-
 function deprecatedDirectiveNode(reason: string): ConstDirectiveNode {
   return directiveNode(
     "deprecated",
-    reason === deprecationDefaultReason
+    // The constant is used instead of reading the directive's own arg default:
+    // graphql@17 moved argument defaults from `defaultValue` to `default`.
+    reason === DEFAULT_DEPRECATION_REASON
       ? {}
       : { reason: { kind: Kind.STRING, value: reason } },
   );
