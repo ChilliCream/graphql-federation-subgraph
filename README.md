@@ -127,13 +127,13 @@ Code-first (decorator-based) schemas need directive support from the schema buil
 
 ## Exporting the schema for composition
 
-Composition tooling needs your schema _with the federation directives applied_ — which the standard `printSchema` from graphql-js silently drops. Use `printSubgraphSchema` instead:
+Composition tooling needs your schema _with the federation directives applied_ — which the standard `printSchema` from graphql-js silently drops. Use `printSourceSchema` instead:
 
 ```ts
 import { writeFileSync } from "node:fs";
-import { printSubgraphSchema } from "graphql-federation-subgraph";
+import { printSourceSchema } from "graphql-federation-subgraph";
 
-writeFileSync("products.graphql", printSubgraphSchema(schema));
+writeFileSync("products.graphql", printSourceSchema(schema));
 ```
 
 By default the output contains only your own definitions with the directives applied — the spec treats the federation directives and scalars as built-ins that composers already know, so the output round-trips cleanly through `buildSubgraphSchema`. Only definitions that structurally match the spec are omitted; if you customized one (say, `@key` with an extra argument, which the spec allows), it stays in the output. Pass `{ includeFederationDefinitions: true }` to emit self-contained SDL that plain `buildSchema` accepts.
@@ -160,7 +160,7 @@ By default the output contains only your own definitions with the directives app
 ## API
 
 - **`buildSubgraphSchema(options)`** — builds an executable `GraphQLSchema` from `typeDefs` (SDL string, `DocumentNode`, or nested arrays of either) and `resolvers` (a map or array of maps), injecting any federation definitions the document doesn't already define. Resolver maps support field resolvers (plain functions or `{ resolve, subscribe }`), `__resolveType` / `__isTypeOf`, custom scalar configs or `GraphQLScalarType` instances, and enum internal values (`{ Color: { RED: "#f00" } }`). `assumeValid` / `assumeValidSDL` are forwarded to graphql-js.
-- **`printSubgraphSchema(schema, options?)`** — prints SDL including applied federation directives. `options.includeFederationDefinitions` (default `false`) controls whether the spec's directive/scalar definitions are emitted.
+- **`printSourceSchema(schema, options?)`** — prints SDL including applied federation directives. `options.includeFederationDefinitions` (default `false`) controls whether the spec's directive/scalar definitions are emitted.
 - **`federationTypeDefs`** / **`federationTypeDefsSDL`** — the definitions as a `DocumentNode` / SDL string, for wiring into your own schema-building pipeline (e.g. `makeExecutableSchema({ typeDefs: [federationTypeDefs, typeDefs] })`).
 - **`federationDirectives`**, **`lookupDirective`**, **`keyDirective`**, … — `GraphQLDirective` instances for code-first schemas (`new GraphQLSchema({ …, directives: [...specifiedDirectives, ...federationDirectives] })`).
 - **`fieldSelectionMapScalar`** / **`fieldSelectionSetScalar`** — the spec's scalar types.
@@ -172,7 +172,7 @@ By default the output contains only your own definitions with the directives app
 | ---------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
 | Specification          | [GraphQL Federation Spec](https://github.com/graphql/composite-schemas-spec) (GraphQL Foundation) | Apollo Federation                                      |
 | Entity resolution      | Ordinary `@lookup` fields with ordinary resolvers                                                 | `Query._entities` + `__resolveReference`               |
-| Schema exposure        | `printSubgraphSchema` → file for composition                                                      | Runtime `Query._service { sdl }`                       |
+| Schema exposure        | `printSourceSchema` → file for composition                                                      | Runtime `Query._service { sdl }`                       |
 | Injected runtime types | None                                                                                              | `_Service`, `_Entity`, `_Any`, `_service`, `_entities` |
 | Spec linking           | None needed (bare directive names)                                                                | `@link` imports (Federation 2)                         |
 

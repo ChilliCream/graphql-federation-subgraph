@@ -31,7 +31,7 @@ describe("getDocumentFromSchema", () => {
     `,
   });
 
-  it("keeps every definition, including the ones printSubgraphSchema omits", async () => {
+  it("keeps every definition, including the ones printSourceSchema omits", async () => {
     await expect(print(getDocumentFromSchema(schema))).toMatchFileSnapshot(
       "./__snapshots__/get-document-from-schema.graphql",
     );

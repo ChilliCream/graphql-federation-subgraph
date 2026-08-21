@@ -11,9 +11,9 @@ export {
   type SubgraphEnumValues,
 } from "./attach-resolvers.js";
 export {
-  printSubgraphSchema,
-  type PrintSubgraphSchemaOptions,
-} from "./print-subgraph-schema.js";
+  printSourceSchema,
+  type PrintSourceSchemaOptions,
+} from "./print-source-schema.js";
 export {
   federationTypeDefs,
   federationTypeDefsSDL,

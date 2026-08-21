@@ -19,7 +19,7 @@ import {
 import {
   buildSubgraphSchema,
   federationDirectives,
-  printSubgraphSchema,
+  printSourceSchema,
 } from "./index.js";
 
 const sdl = /* GraphQL */ `
@@ -36,9 +36,9 @@ const sdl = /* GraphQL */ `
   }
 `;
 
-describe("printSubgraphSchema", () => {
+describe("printSourceSchema", () => {
   it("prints applied federation directives", () => {
-    const output = printSubgraphSchema(buildSubgraphSchema({ typeDefs: sdl }));
+    const output = printSourceSchema(buildSubgraphSchema({ typeDefs: sdl }));
 
     expect(output).toContain('@key(fields: "id")');
     expect(output).toContain('@key(fields: "sku")');
@@ -50,7 +50,7 @@ describe("printSubgraphSchema", () => {
   });
 
   it("omits the federation definitions by default", () => {
-    const output = printSubgraphSchema(buildSubgraphSchema({ typeDefs: sdl }));
+    const output = printSourceSchema(buildSubgraphSchema({ typeDefs: sdl }));
 
     expect(output).not.toContain("directive @");
     expect(output).not.toContain("scalar FieldSelectionMap");
@@ -58,15 +58,15 @@ describe("printSubgraphSchema", () => {
   });
 
   it("round-trips through buildSubgraphSchema", () => {
-    const output = printSubgraphSchema(buildSubgraphSchema({ typeDefs: sdl }));
+    const output = printSourceSchema(buildSubgraphSchema({ typeDefs: sdl }));
     const rebuilt = buildSubgraphSchema({ typeDefs: output });
 
     expect(validateSchema(rebuilt)).toEqual([]);
-    expect(printSubgraphSchema(rebuilt)).toEqual(output);
+    expect(printSourceSchema(rebuilt)).toEqual(output);
   });
 
   it("produces self-contained SDL with includeFederationDefinitions", () => {
-    const output = printSubgraphSchema(buildSubgraphSchema({ typeDefs: sdl }), {
+    const output = printSourceSchema(buildSubgraphSchema({ typeDefs: sdl }), {
       includeFederationDefinitions: true,
     });
 
@@ -80,10 +80,10 @@ describe("printSubgraphSchema", () => {
   });
 
   it("omits the schema block for default root type names, keeps custom ones", () => {
-    const output = printSubgraphSchema(buildSubgraphSchema({ typeDefs: sdl }));
+    const output = printSourceSchema(buildSubgraphSchema({ typeDefs: sdl }));
     expect(output).not.toContain("schema {");
 
-    const custom = printSubgraphSchema(
+    const custom = printSourceSchema(
       buildSubgraphSchema({
         typeDefs: /* GraphQL */ `
           schema {
@@ -105,7 +105,7 @@ describe("printSubgraphSchema", () => {
   });
 
   it("keeps user-customized federation-named definitions and round-trips them", () => {
-    const output = printSubgraphSchema(
+    const output = printSourceSchema(
       buildSubgraphSchema({
         typeDefs: /* GraphQL */ `
           scalar FieldSelectionSet
@@ -136,11 +136,11 @@ describe("printSubgraphSchema", () => {
       "fields",
       "futureArg",
     ]);
-    expect(printSubgraphSchema(rebuilt)).toEqual(output);
+    expect(printSourceSchema(rebuilt)).toEqual(output);
   });
 
   it("still omits user-supplied exact copies of spec definitions", () => {
-    const output = printSubgraphSchema(
+    const output = printSourceSchema(
       buildSubgraphSchema({
         typeDefs: /* GraphQL */ `
           directive @lookup on FIELD_DEFINITION
@@ -161,7 +161,7 @@ describe("printSubgraphSchema", () => {
   });
 
   it("keeps non-federation custom directives and their definitions", () => {
-    const output = printSubgraphSchema(
+    const output = printSourceSchema(
       buildSubgraphSchema({
         typeDefs: /* GraphQL */ `
           directive @mine on FIELD_DEFINITION
@@ -183,7 +183,7 @@ describe("printSubgraphSchema", () => {
   });
 
   it("merges type extensions into a single printed definition", () => {
-    const output = printSubgraphSchema(
+    const output = printSourceSchema(
       buildSubgraphSchema({
         typeDefs: /* GraphQL */ `
           type Query {
@@ -207,7 +207,7 @@ describe("printSubgraphSchema", () => {
 
     const rebuilt = buildSubgraphSchema({ typeDefs: output });
     expect(validateSchema(rebuilt)).toEqual([]);
-    expect(printSubgraphSchema(rebuilt)).toEqual(output);
+    expect(printSourceSchema(rebuilt)).toEqual(output);
   });
 
   it("merges extendSchema-built extensions into a single printed definition", () => {
@@ -216,7 +216,7 @@ describe("printSubgraphSchema", () => {
       parse("extend type Query { b: String }"),
     );
 
-    const output = printSubgraphSchema(schema);
+    const output = printSourceSchema(schema);
     expect(output).not.toContain("extend type");
     expect(output).toContain("a: String");
     expect(output).toContain("b: String");
@@ -253,7 +253,7 @@ describe("printSubgraphSchema", () => {
       directives: [...specifiedDirectives, ...federationDirectives],
     });
 
-    const output = printSubgraphSchema(schema);
+    const output = printSourceSchema(schema);
     expect(output).toContain(
       'type Product @key(fields: "id") @key(fields: "sku") {',
     );
@@ -285,7 +285,7 @@ describe("printSubgraphSchema", () => {
       }),
     });
 
-    const output = printSubgraphSchema(schema);
+    const output = printSourceSchema(schema);
     expect(output).toContain(
       'old: String @deprecated(reason: "Use somethingElse.")',
     );
@@ -303,7 +303,7 @@ describe("printSubgraphSchema", () => {
       }),
     });
 
-    const output = printSubgraphSchema(schema);
+    const output = printSourceSchema(schema);
     expect(output).toContain("schema {");
     expect(output).toContain("query: RootQuery");
   });
@@ -326,7 +326,7 @@ describe("printSubgraphSchema", () => {
       }),
     });
 
-    const output = printSubgraphSchema(schema);
+    const output = printSourceSchema(schema);
     expect(output).toContain("input SearchBy @oneOf {");
   });
 
@@ -345,7 +345,7 @@ describe("printSubgraphSchema", () => {
       ),
     );
 
-    const output = printSubgraphSchema(extended);
+    const output = printSourceSchema(extended);
     expect(output).toContain('type Query @key(fields: "product") {');
     expect(output).toContain("sku: String @external");
   });
@@ -375,7 +375,7 @@ describe("printSubgraphSchema", () => {
       }),
     });
 
-    const output = printSubgraphSchema(schema);
+    const output = printSourceSchema(schema);
     expect(output.match(/@deprecated/g)).toHaveLength(1);
     expect(output.match(/@specifiedBy/g)).toHaveLength(1);
   });
@@ -401,7 +401,7 @@ describe("printSubgraphSchema", () => {
       },
     };
 
-    const output = printSubgraphSchema(schema);
+    const output = printSourceSchema(schema);
     expect(output).toContain('type Query @tag(name: "type-extension") {');
     // The duplicate of the AST-applied directive is dropped; the new one kept.
     expect(output).toContain(
@@ -423,7 +423,7 @@ describe("printSubgraphSchema", () => {
       directives: { constraint: { max: 10 } },
     };
 
-    const output = printSubgraphSchema(schema);
+    const output = printSourceSchema(schema);
     expect(output).toContain("a(limit: Int @constraint(max: 10)): String");
   });
 
@@ -444,7 +444,7 @@ describe("printSubgraphSchema", () => {
       directives: { weight: { value: 1 } },
     };
 
-    const output = printSubgraphSchema(schema);
+    const output = printSourceSchema(schema);
     expect(output).toContain("type Query @weight(value: 1.0) {");
     expect(() => buildSchema(output)).not.toThrow();
   });
@@ -469,7 +469,7 @@ describe("printSubgraphSchema", () => {
       ],
     });
 
-    const output = printSubgraphSchema(schema);
+    const output = printSourceSchema(schema);
     expect(output).toContain('type Query @tag(name: "x") @tag(name: "x") {');
   });
 
@@ -496,12 +496,12 @@ describe("printSubgraphSchema", () => {
       directives: [...specifiedDirectives, marked],
     });
 
-    const output = printSubgraphSchema(schema);
+    const output = printSourceSchema(schema);
     expect(output).toContain("f: String @marked(level: HIGH)");
   });
 
   it("merges enum, union, input, scalar, and schema extensions when printing", () => {
-    const output = printSubgraphSchema(
+    const output = printSourceSchema(
       buildSubgraphSchema({
         typeDefs: /* GraphQL */ `
           directive @stamp on SCHEMA | ENUM | UNION | INPUT_OBJECT | SCALAR
@@ -556,6 +556,6 @@ describe("printSubgraphSchema", () => {
 
     const rebuilt = buildSubgraphSchema({ typeDefs: output });
     expect(validateSchema(rebuilt)).toEqual([]);
-    expect(printSubgraphSchema(rebuilt)).toEqual(output);
+    expect(printSourceSchema(rebuilt)).toEqual(output);
   });
 });

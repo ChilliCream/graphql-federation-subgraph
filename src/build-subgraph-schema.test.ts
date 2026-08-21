@@ -12,7 +12,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildSubgraphSchema,
   federationTypeDefsSDL,
-  printSubgraphSchema,
+  printSourceSchema,
 } from "./index.js";
 
 const productSDL = /* GraphQL */ `
@@ -360,7 +360,7 @@ describe("buildSubgraphSchema", () => {
       resolvers: { Color: { RED: "#f00" } },
     });
 
-    const output = printSubgraphSchema(schema);
+    const output = printSourceSchema(schema);
     expect(output).toContain('type Product @key(fields: "id")');
     expect(output).toContain("@lookup");
   });
@@ -910,7 +910,7 @@ describe("buildSubgraphSchema", () => {
     });
 
     expect(validateSchema(schema)).toEqual([]);
-    expect(printSubgraphSchema(schema)).toMatchInlineSnapshot(`
+    expect(printSourceSchema(schema)).toMatchInlineSnapshot(`
       "type Query {
         product: Product @lookup
       }
@@ -938,7 +938,7 @@ describe("buildSubgraphSchema", () => {
     });
 
     expect(validateSchema(schema)).toEqual([]);
-    expect(printSubgraphSchema(schema)).toMatchInlineSnapshot(`
+    expect(printSourceSchema(schema)).toMatchInlineSnapshot(`
       "type Query {
         product: Product @lookup
       }
@@ -961,7 +961,7 @@ describe("buildSubgraphSchema", () => {
     });
 
     expect(validateSchema(schema)).toEqual([]);
-    expect(printSubgraphSchema(schema)).toMatchInlineSnapshot(`
+    expect(printSourceSchema(schema)).toMatchInlineSnapshot(`
       "directive @tag(
         "Tag name."
         name: String
@@ -1077,7 +1077,7 @@ describe("buildSubgraphSchema", () => {
     });
 
     // The healed schema still prints its applied directives and definitions.
-    const output = printSubgraphSchema(schema, {
+    const output = printSourceSchema(schema, {
       includeFederationDefinitions: true,
     });
     expect(output).toContain(

@@ -2,7 +2,7 @@ import { Kind, print, type DefinitionNode, type GraphQLSchema } from "graphql";
 import { getDocumentFromSchema } from "./get-document-from-schema.js";
 import { federationTypeDefs } from "./type-defs.js";
 
-export interface PrintSubgraphSchemaOptions {
+export interface PrintSourceSchemaOptions {
   /**
    * When `true`, the definitions of the spec's federation directives and
    * scalars (`directive @key …`, `scalar FieldSelectionMap`, …) are included,
@@ -12,7 +12,7 @@ export interface PrintSubgraphSchemaOptions {
    * as built-ins that composition tooling already knows, so by default the
    * output contains only the user-authored schema with the federation
    * directives applied — and round-trips through
-   * `buildSubgraphSchema({ typeDefs: printSubgraphSchema(schema) })`.
+   * `buildSubgraphSchema({ typeDefs: printSourceSchema(schema) })`.
    *
    * Only definitions that structurally match the spec are omitted. A
    * same-named definition the user customized (e.g. `@key` with an extra
@@ -28,9 +28,9 @@ export interface PrintSubgraphSchemaOptions {
  * `printSchema` from graphql-js would drop. Use this to export the schema
  * document that composition tooling consumes.
  */
-export function printSubgraphSchema(
+export function printSourceSchema(
   schema: GraphQLSchema,
-  options: PrintSubgraphSchemaOptions = {},
+  options: PrintSourceSchemaOptions = {},
 ): string {
   const document = getDocumentFromSchema(schema);
 
