@@ -911,7 +911,13 @@ describe("buildSubgraphSchema", () => {
 
     expect(validateSchema(schema)).toEqual([]);
     expect(printSourceSchema(schema)).toMatchInlineSnapshot(`
-      "type Query {
+      "scalar FieldSelectionSet
+
+      directive @lookup on FIELD_DEFINITION
+
+      directive @key(fields: FieldSelectionSet!) repeatable on OBJECT | INTERFACE
+
+      type Query {
         product: Product @lookup
       }
 
@@ -939,7 +945,13 @@ describe("buildSubgraphSchema", () => {
 
     expect(validateSchema(schema)).toEqual([]);
     expect(printSourceSchema(schema)).toMatchInlineSnapshot(`
-      "type Query {
+      "scalar FieldSelectionSet
+
+      directive @lookup on FIELD_DEFINITION
+
+      directive @key(fields: FieldSelectionSet!) repeatable on OBJECT | INTERFACE
+
+      type Query {
         product: Product @lookup
       }
 
@@ -1078,7 +1090,7 @@ describe("buildSubgraphSchema", () => {
 
     // The healed schema still prints its applied directives and definitions.
     const output = printSourceSchema(schema, {
-      includeFederationDefinitions: true,
+      federationDefinitions: "all",
     });
     expect(output).toContain(
       "directive @paint(color: Color = GREEN) on FIELD_DEFINITION",
