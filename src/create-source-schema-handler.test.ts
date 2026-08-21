@@ -16,6 +16,9 @@ const sdl = /* GraphQL */ `
   }
 `;
 
+/* eslint-disable no-restricted-syntax -- a recorder is mutable by contract:
+   the handler under test writes `statusCode`, and `end` records into `body`
+   and `ended` */
 interface RecordedResponse {
   statusCode: number;
   headers: Record<string, string>;
@@ -24,6 +27,7 @@ interface RecordedResponse {
   setHeader(name: string, value: string): void;
   end(body?: string): void;
 }
+/* eslint-enable no-restricted-syntax */
 
 function createResponse(): RecordedResponse {
   return {

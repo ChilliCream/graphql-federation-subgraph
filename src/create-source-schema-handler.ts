@@ -14,6 +14,8 @@ export interface SourceSchemaRequest {
   readonly method?: string | undefined;
 }
 
+/* eslint-disable no-restricted-syntax -- `statusCode` is assigned by the
+   handler, mirroring Node's mutable `ServerResponse.statusCode` */
 /**
  * The part of an HTTP response the source schema handler writes. Node's
  * `ServerResponse`, Express's `Response`, and Fastify's `reply.raw` all
@@ -24,6 +26,7 @@ export interface SourceSchemaResponse {
   setHeader(name: string, value: string): unknown;
   end(body?: string): unknown;
 }
+/* eslint-enable no-restricted-syntax */
 
 /**
  * The handler `createSourceSchemaHandler` returns: serves the source schema

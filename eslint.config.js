@@ -44,6 +44,12 @@ export default tseslint.config(
           message:
             "Do not use `as const`; declare an explicit type instead (e.g. annotate the function's return type).",
         },
+        {
+          selector:
+            "TSInterfaceBody > TSPropertySignature:not([readonly=true])",
+          message:
+            "Interface properties must be `readonly`. Where mutation is part of the contract, add an eslint-disable comment stating why.",
+        },
       ],
     },
   },
