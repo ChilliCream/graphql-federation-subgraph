@@ -61,6 +61,14 @@ const schema = buildSubgraphSchema({ typeDefs, resolvers });
 
 All federation directive and scalar definitions are added automatically; definitions you provide yourself take precedence and are never duplicated.
 
+Each server below exposes two things: the GraphQL endpoint itself, and the source schema document at `/graphql/schema.graphql` for composition tooling (see [Exporting the schema for composition](#exporting-the-schema-for-composition)), served by a handler from this package:
+
+```ts
+import { createSourceSchemaHandler } from "graphql-federation-subgraph";
+
+const schemaHandler = createSourceSchemaHandler(schema);
+```
+
 ### GraphQL Yoga
 
 ```ts
@@ -68,17 +76,34 @@ import { createServer } from "node:http";
 import { createYoga } from "graphql-yoga";
 
 const yoga = createYoga({ schema });
-createServer(yoga).listen(4000);
+
+createServer((req, res) => {
+  if (req.url?.split("?")[0] === "/graphql/schema.graphql") {
+    schemaHandler(req, res);
+
+    return;
+  }
+
+  yoga(req, res);
+}).listen(4000);
 ```
 
 ### Apollo Server
 
+`startStandaloneServer` answers every path itself and cannot mount additional routes, so the schema document route uses Apollo's Express integration:
+
 ```ts
+import express from "express";
 import { ApolloServer } from "@apollo/server";
-import { startStandaloneServer } from "@apollo/server/standalone";
+import { expressMiddleware } from "@as-integrations/express5";
 
 const server = new ApolloServer({ schema });
-await startStandaloneServer(server, { listen: { port: 4000 } });
+await server.start();
+
+const app = express();
+app.get("/graphql/schema.graphql", schemaHandler);
+app.use("/graphql", express.json(), expressMiddleware(server));
+app.listen(4000);
 ```
 
 ### Mercurius (Fastify)
@@ -89,6 +114,14 @@ import mercurius from "mercurius";
 
 const app = Fastify();
 app.register(mercurius, { schema });
+
+// hijack() hands the raw request/response pair to the handler, keeping
+// Fastify from sending its own response on top.
+app.get("/graphql/schema.graphql", (request, reply) => {
+  reply.hijack();
+  schemaHandler(request.raw, reply.raw);
+});
+
 await app.listen({ port: 4000 });
 ```
 
@@ -98,7 +131,17 @@ await app.listen({ port: 4000 });
 import { createHandler } from "graphql-http/lib/use/http";
 import { createServer } from "node:http";
 
-createServer(createHandler({ schema })).listen(4000);
+const handler = createHandler({ schema });
+
+createServer((req, res) => {
+  if (req.url?.split("?")[0] === "/graphql/schema.graphql") {
+    schemaHandler(req, res);
+
+    return;
+  }
+
+  handler(req, res);
+}).listen(4000);
 ```
 
 ### NestJS
@@ -125,9 +168,35 @@ export class AppModule {}
 
 Code-first (decorator-based) schemas need directive support from the schema builder itself.
 
+The schema Nest builds becomes available through `GraphQLSchemaHost` once the application has initialized, while the schema document route must be registered _before_ init so it precedes the Apollo middleware, which is mounted with a prefix match on `/graphql` and would swallow the route — so the handler is created lazily on the first request:
+
+```ts
+import { NestFactory } from "@nestjs/core";
+import { GraphQLSchemaHost } from "@nestjs/graphql";
+import {
+  createSourceSchemaHandler,
+  type SourceSchemaHandler,
+} from "graphql-federation-subgraph";
+
+const app = await NestFactory.create(AppModule);
+
+let schemaHandler: SourceSchemaHandler | undefined;
+
+app.use("/graphql/schema.graphql", (req, res) => {
+  schemaHandler ??= createSourceSchemaHandler(
+    app.get(GraphQLSchemaHost).schema,
+  );
+  schemaHandler(req, res);
+});
+
+await app.listen(4000);
+```
+
 ## Exporting the schema for composition
 
-Composition tooling needs your schema _with the federation directives applied_ — which the standard `printSchema` from graphql-js silently drops. Use `printSourceSchema` instead:
+Composition tooling needs your schema _with the federation directives applied_ — which the standard `printSchema` from graphql-js silently drops, and which standard introspection cannot express at all. This package exports it two ways.
+
+**As a file**, with `printSourceSchema`:
 
 ```ts
 import { writeFileSync } from "node:fs";
@@ -137,6 +206,10 @@ writeFileSync("products.graphql", printSourceSchema(schema));
 ```
 
 By default the output contains only your own definitions with the directives applied — the spec treats the federation directives and scalars as built-ins that composers already know, so the output round-trips cleanly through `buildSubgraphSchema`. Only definitions that structurally match the spec are omitted; if you customized one (say, `@key` with an extra argument, which the spec allows), it stays in the output. Pass `{ includeFederationDefinitions: true }` to emit self-contained SDL that plain `buildSchema` accepts.
+
+**Over HTTP**, with `createSourceSchemaHandler` — the handler the server examples above mount at `/graphql/schema.graphql`. It serves `printSourceSchema(schema)` as `application/graphql` (and takes the same options), answering `GET` and `HEAD` and rejecting other methods with `405`. The request and response types are structural, so it plugs into `node:http`, Express, and NestJS directly, and into Fastify via `reply.hijack()`; routing stays the server's job, so mount it wherever fits — `/graphql/schema.graphql` is just the convention used here.
+
+Like introspection, the endpoint reveals the full schema. A deployment that disables introspection in production should gate or omit this endpoint the same way.
 
 ## Directive reference
 
@@ -161,6 +234,7 @@ By default the output contains only your own definitions with the directives app
 
 - **`buildSubgraphSchema(options)`** — builds an executable `GraphQLSchema` from `typeDefs` (SDL string, `DocumentNode`, or nested arrays of either) and `resolvers` (a map or array of maps), injecting any federation definitions the document doesn't already define. Resolver maps support field resolvers (plain functions or `{ resolve, subscribe }`), `__resolveType` / `__isTypeOf`, custom scalar configs or `GraphQLScalarType` instances, and enum internal values (`{ Color: { RED: "#f00" } }`). `assumeValid` / `assumeValidSDL` are forwarded to graphql-js.
 - **`printSourceSchema(schema, options?)`** — prints SDL including applied federation directives. `options.includeFederationDefinitions` (default `false`) controls whether the spec's directive/scalar definitions are emitted.
+- **`createSourceSchemaHandler(schema, options?)`** — creates an HTTP handler `(request, response) => void` serving `printSourceSchema(schema, options)` as `application/graphql`. Structurally typed (`SourceSchemaRequest` / `SourceSchemaResponse`), so it works with `node:http`, Express, and NestJS directly and with Fastify via `reply.hijack()`; answers `GET`/`HEAD`, `405` otherwise.
 - **`federationTypeDefs`** / **`federationTypeDefsSDL`** — the definitions as a `DocumentNode` / SDL string, for wiring into your own schema-building pipeline (e.g. `makeExecutableSchema({ typeDefs: [federationTypeDefs, typeDefs] })`).
 - **`federationDirectives`**, **`lookupDirective`**, **`keyDirective`**, … — `GraphQLDirective` instances for code-first schemas (`new GraphQLSchema({ …, directives: [...specifiedDirectives, ...federationDirectives] })`).
 - **`fieldSelectionMapScalar`** / **`fieldSelectionSetScalar`** — the spec's scalar types.
@@ -172,7 +246,7 @@ By default the output contains only your own definitions with the directives app
 | ---------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
 | Specification          | [GraphQL Federation Spec](https://github.com/graphql/composite-schemas-spec) (GraphQL Foundation) | Apollo Federation                                      |
 | Entity resolution      | Ordinary `@lookup` fields with ordinary resolvers                                                 | `Query._entities` + `__resolveReference`               |
-| Schema exposure        | `printSourceSchema` → file for composition                                                        | Runtime `Query._service { sdl }`                       |
+| Schema exposure        | `printSourceSchema` → file, `createSourceSchemaHandler` → `/graphql/schema.graphql`               | Runtime `Query._service { sdl }`                       |
 | Injected runtime types | None                                                                                              | `_Service`, `_Entity`, `_Any`, `_service`, `_entities` |
 | Spec linking           | None needed (bare directive names)                                                                | `@link` imports (Federation 2)                         |
 
