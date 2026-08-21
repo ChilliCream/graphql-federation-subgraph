@@ -12,6 +12,7 @@ export {
 } from "./attach-resolvers.js";
 export {
   printSourceSchema,
+  type FederationDefinitionsMode,
   type PrintSourceSchemaOptions,
 } from "./print-source-schema.js";
 export {

@@ -64,6 +64,20 @@ jobs:
       - run: npm i --no-save --legacy-peer-deps graphql@^${{ matrix.graphql-version }}
       - run: npm test
 
+  coverage:
+    name: Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      # Fails if overall coverage drops below the thresholds configured in
+      # vitest.config.ts (80% statements/branches/functions/lines).
+      - run: npm run test:coverage
+
   build:
     name: Build
     runs-on: ubuntu-latest

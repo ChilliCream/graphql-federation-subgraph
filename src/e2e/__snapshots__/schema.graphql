@@ -1,3 +1,15 @@
+scalar FieldSelectionMap
+
+scalar FieldSelectionSet
+
+directive @lookup on FIELD_DEFINITION
+
+directive @is(field: FieldSelectionMap!) on ARGUMENT_DEFINITION
+
+directive @key(fields: FieldSelectionSet!) repeatable on OBJECT | INTERFACE
+
+directive @shareable repeatable on OBJECT | FIELD_DEFINITION
+
 type Query {
   productById(id: ID!): Product @lookup
   productBySku(sku: String! @is(field: "sku")): Product @lookup

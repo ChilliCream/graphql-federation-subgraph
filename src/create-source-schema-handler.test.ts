@@ -137,13 +137,15 @@ describe("createSourceSchemaHandler", () => {
   it("forwards print options", () => {
     const handler = createSourceSchemaHandler(
       buildSubgraphSchema({ typeDefs: sdl }),
-      { includeFederationDefinitions: true },
+      { federationDefinitions: "none" },
     );
     const response = createResponse();
 
     handler({ method: "GET" }, response);
 
-    expect(response.body).toContain("directive @key");
-    expect(response.body).toContain("scalar FieldSelectionSet");
+    // The default would export the used definitions; "none" omits them.
+    expect(response.body).toContain("@lookup");
+    expect(response.body).not.toContain("directive @");
+    expect(response.body).not.toContain("scalar FieldSelectionSet");
   });
 });

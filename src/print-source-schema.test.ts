@@ -19,6 +19,7 @@ import {
 import {
   buildSubgraphSchema,
   federationDirectives,
+  lookupDirective,
   printSourceSchema,
 } from "./index.js";
 
@@ -49,12 +50,420 @@ describe("printSourceSchema", () => {
     expect(output).toContain("@inaccessible");
   });
 
-  it("omits the federation definitions by default", () => {
+  it("exports the used spec definitions by default", () => {
     const output = printSourceSchema(buildSubgraphSchema({ typeDefs: sdl }));
 
-    expect(output).not.toContain("directive @");
-    expect(output).not.toContain("scalar FieldSelectionMap");
-    expect(output).not.toContain("scalar FieldSelectionSet");
+    // The applied directives travel with their definitions and the scalars
+    // those definitions need; unused spec definitions (@require, @provides,
+    // @external, …) stay out.
+    expect(output).toMatchInlineSnapshot(`
+      "scalar FieldSelectionMap
+
+      scalar FieldSelectionSet
+
+      directive @lookup on FIELD_DEFINITION
+
+      directive @internal on OBJECT | FIELD_DEFINITION
+
+      directive @inaccessible on FIELD_DEFINITION | OBJECT | INTERFACE | UNION | ARGUMENT_DEFINITION | SCALAR | ENUM | ENUM_VALUE | INPUT_OBJECT | INPUT_FIELD_DEFINITION
+
+      directive @is(field: FieldSelectionMap!) on ARGUMENT_DEFINITION
+
+      directive @key(fields: FieldSelectionSet!) repeatable on OBJECT | INTERFACE
+
+      directive @shareable repeatable on OBJECT | FIELD_DEFINITION
+
+      type Query {
+        productById(id: ID!): Product @lookup
+        productBySku(sku: String! @is(field: "sku")): Product @lookup @internal
+      }
+
+      type Product @key(fields: "id") @key(fields: "sku") {
+        id: ID!
+        sku: String!
+        name: String! @shareable
+        hidden: String @inaccessible
+      }
+      "
+    `);
+  });
+
+  it("produces self-contained SDL by default", () => {
+    const output = printSourceSchema(buildSubgraphSchema({ typeDefs: sdl }));
+
+    const standalone = buildSchema(output);
+    expect(validateSchema(standalone)).toEqual([]);
+  });
+
+  it("omits all spec definitions with federationDefinitions: 'none'", () => {
+    const output = printSourceSchema(buildSubgraphSchema({ typeDefs: sdl }), {
+      federationDefinitions: "none",
+    });
+
+    expect(output).toMatchInlineSnapshot(`
+      "type Query {
+        productById(id: ID!): Product @lookup
+        productBySku(sku: String! @is(field: "sku")): Product @lookup @internal
+      }
+
+      type Product @key(fields: "id") @key(fields: "sku") {
+        id: ID!
+        sku: String!
+        name: String! @shareable
+        hidden: String @inaccessible
+      }
+      "
+    `);
+  });
+
+  it("prints the spec definitions as one block below the schema block", () => {
+    const output = printSourceSchema(
+      buildSubgraphSchema({
+        typeDefs: /* GraphQL */ `
+          schema {
+            query: QueryRoot
+          }
+
+          type QueryRoot {
+            productById(id: ID!): Product @lookup
+          }
+
+          type Product @key(fields: "id") {
+            id: ID!
+          }
+        `,
+      }),
+    );
+
+    // schema block first, then the spec definitions in the spec's own order,
+    // then the user-authored definitions — regardless of the schema's
+    // internal directive and type-map order.
+    expect(output).toMatchInlineSnapshot(`
+      "schema {
+        query: QueryRoot
+      }
+
+      scalar FieldSelectionSet
+
+      directive @lookup on FIELD_DEFINITION
+
+      directive @key(fields: FieldSelectionSet!) repeatable on OBJECT | INTERFACE
+
+      type QueryRoot {
+        productById(id: ID!): Product @lookup
+      }
+
+      type Product @key(fields: "id") {
+        id: ID!
+      }
+      "
+    `);
+  });
+
+  it("exports definitions for spec directives applied on enums, unions, and inputs", () => {
+    const output = printSourceSchema(
+      buildSubgraphSchema({
+        typeDefs: /* GraphQL */ `
+          type Query {
+            status: Status
+            find(where: Filter): Result
+          }
+
+          enum Status {
+            ACTIVE
+            HIDDEN @inaccessible
+          }
+
+          union Result @inaccessible = Product
+
+          input Filter {
+            hidden: String @inaccessible
+          }
+
+          type Product {
+            id: ID!
+          }
+        `,
+      }),
+    );
+
+    expect(output).toMatchInlineSnapshot(`
+      "directive @inaccessible on FIELD_DEFINITION | OBJECT | INTERFACE | UNION | ARGUMENT_DEFINITION | SCALAR | ENUM | ENUM_VALUE | INPUT_OBJECT | INPUT_FIELD_DEFINITION
+
+      type Query {
+        status: Status
+        find(where: Filter): Result
+      }
+
+      enum Status {
+        ACTIVE
+        HIDDEN @inaccessible
+      }
+
+      union Result @inaccessible = Product
+
+      input Filter {
+        hidden: String @inaccessible
+      }
+
+      type Product {
+        id: ID!
+      }
+      "
+    `);
+    expect(validateSchema(buildSchema(output))).toEqual([]);
+  });
+
+  it("keeps a spec scalar referenced directly by a user definition", () => {
+    const output = printSourceSchema(
+      buildSubgraphSchema({
+        typeDefs: /* GraphQL */ `
+          type Query {
+            selection: FieldSelectionSet
+          }
+        `,
+      }),
+    );
+
+    expect(output).toMatchInlineSnapshot(`
+      "scalar FieldSelectionSet
+
+      type Query {
+        selection: FieldSelectionSet
+      }
+      "
+    `);
+    expect(validateSchema(buildSchema(output))).toEqual([]);
+  });
+
+  it("injects spec definitions for directives applied without registration", () => {
+    // The extensions.directives convention works without registering the
+    // federation directives on the schema; the printed document must still
+    // carry the definitions of what it applies.
+    const schema = new GraphQLSchema({
+      query: new GraphQLObjectType({
+        name: "Query",
+        extensions: { directives: { key: [{ fields: "ok" }] } },
+        fields: {
+          ok: {
+            type: GraphQLString,
+            extensions: { directives: { lookup: {} } },
+          },
+        },
+      }),
+    });
+
+    const output = printSourceSchema(schema);
+    expect(output).toMatchInlineSnapshot(`
+      "scalar FieldSelectionSet
+
+      directive @lookup on FIELD_DEFINITION
+
+      directive @key(fields: FieldSelectionSet!) repeatable on OBJECT | INTERFACE
+
+      type Query @key(fields: "ok") {
+        ok: String @lookup
+      }
+      "
+    `);
+    expect(validateSchema(buildSchema(output))).toEqual([]);
+  });
+
+  it("exports every spec definition in spec order and round-trips with 'all'", () => {
+    const output = printSourceSchema(buildSubgraphSchema({ typeDefs: sdl }), {
+      federationDefinitions: "all",
+    });
+
+    expect(output).toMatchInlineSnapshot(`
+      "scalar FieldSelectionMap
+
+      scalar FieldSelectionSet
+
+      directive @lookup on FIELD_DEFINITION
+
+      directive @internal on OBJECT | FIELD_DEFINITION
+
+      directive @inaccessible on FIELD_DEFINITION | OBJECT | INTERFACE | UNION | ARGUMENT_DEFINITION | SCALAR | ENUM | ENUM_VALUE | INPUT_OBJECT | INPUT_FIELD_DEFINITION
+
+      directive @is(field: FieldSelectionMap!) on ARGUMENT_DEFINITION
+
+      directive @require(field: FieldSelectionMap!) on ARGUMENT_DEFINITION
+
+      directive @key(fields: FieldSelectionSet!) repeatable on OBJECT | INTERFACE
+
+      directive @shareable repeatable on OBJECT | FIELD_DEFINITION
+
+      directive @provides(fields: FieldSelectionSet!) on FIELD_DEFINITION
+
+      directive @external on FIELD_DEFINITION
+
+      directive @override(from: String!) on FIELD_DEFINITION
+
+      directive @interfaceObject on OBJECT
+
+      directive @implement on FIELD_DEFINITION
+
+      type Query {
+        productById(id: ID!): Product @lookup
+        productBySku(sku: String! @is(field: "sku")): Product @lookup @internal
+      }
+
+      type Product @key(fields: "id") @key(fields: "sku") {
+        id: ID!
+        sku: String!
+        name: String! @shareable
+        hidden: String @inaccessible
+      }
+      "
+    `);
+    expect(validateSchema(buildSchema(output))).toEqual([]);
+
+    const rebuilt = buildSubgraphSchema({ typeDefs: output });
+    expect(validateSchema(rebuilt)).toEqual([]);
+    expect(
+      printSourceSchema(rebuilt, { federationDefinitions: "all" }),
+    ).toEqual(output);
+  });
+
+  it("exports every spec definition with 'all' even when only some are registered", () => {
+    const schema = new GraphQLSchema({
+      query: new GraphQLObjectType({
+        name: "Query",
+        fields: {
+          ok: {
+            type: GraphQLString,
+            extensions: { directives: { lookup: {} } },
+          },
+        },
+      }),
+      directives: [...specifiedDirectives, lookupDirective],
+    });
+
+    const output = printSourceSchema(schema, { federationDefinitions: "all" });
+    expect(output).toMatchInlineSnapshot(`
+      "scalar FieldSelectionMap
+
+      scalar FieldSelectionSet
+
+      directive @lookup on FIELD_DEFINITION
+
+      directive @internal on OBJECT | FIELD_DEFINITION
+
+      directive @inaccessible on FIELD_DEFINITION | OBJECT | INTERFACE | UNION | ARGUMENT_DEFINITION | SCALAR | ENUM | ENUM_VALUE | INPUT_OBJECT | INPUT_FIELD_DEFINITION
+
+      directive @is(field: FieldSelectionMap!) on ARGUMENT_DEFINITION
+
+      directive @require(field: FieldSelectionMap!) on ARGUMENT_DEFINITION
+
+      directive @key(fields: FieldSelectionSet!) repeatable on OBJECT | INTERFACE
+
+      directive @shareable repeatable on OBJECT | FIELD_DEFINITION
+
+      directive @provides(fields: FieldSelectionSet!) on FIELD_DEFINITION
+
+      directive @external on FIELD_DEFINITION
+
+      directive @override(from: String!) on FIELD_DEFINITION
+
+      directive @interfaceObject on OBJECT
+
+      directive @implement on FIELD_DEFINITION
+
+      type Query {
+        ok: String @lookup
+      }
+      "
+    `);
+    expect(validateSchema(buildSchema(output))).toEqual([]);
+  });
+
+  it("keeps customized definitions and round-trips with 'none'", () => {
+    const typeDefs = /* GraphQL */ `
+      scalar FieldSelectionSet
+
+      directive @key(fields: FieldSelectionSet!, futureArg: String) repeatable on OBJECT | INTERFACE
+
+      type Query {
+        productById(id: ID!): Product @lookup
+      }
+
+      type Product @key(fields: "id", futureArg: "x") {
+        id: ID!
+      }
+    `;
+    const output = printSourceSchema(buildSubgraphSchema({ typeDefs }), {
+      federationDefinitions: "none",
+    });
+
+    // The customized definition stays; exact spec matches are omitted.
+    expect(output).toMatchInlineSnapshot(`
+      "directive @key(fields: FieldSelectionSet!, futureArg: String) repeatable on OBJECT | INTERFACE
+
+      type Query {
+        productById(id: ID!): Product @lookup
+      }
+
+      type Product @key(fields: "id", futureArg: "x") {
+        id: ID!
+      }
+      "
+    `);
+
+    const rebuilt = buildSubgraphSchema({ typeDefs: output });
+    expect(validateSchema(rebuilt)).toEqual([]);
+    expect(
+      printSourceSchema(rebuilt, { federationDefinitions: "none" }),
+    ).toEqual(output);
+  });
+
+  it("prints identical documents for equivalent schemas regardless of assembly", () => {
+    const plain = printSourceSchema(buildSubgraphSchema({ typeDefs: sdl }));
+    const scrambled = printSourceSchema(
+      buildSubgraphSchema({
+        typeDefs: [
+          // Exact spec copies pasted in the user's own order — including an
+          // unused one — must neither reorder nor bloat the output.
+          "directive @key(fields: FieldSelectionSet!) repeatable on OBJECT | INTERFACE",
+          "directive @external on FIELD_DEFINITION",
+          sdl,
+          "scalar FieldSelectionSet",
+          "directive @lookup on FIELD_DEFINITION",
+        ],
+      }),
+    );
+
+    expect(scrambled).toEqual(plain);
+    expect(scrambled).not.toContain("directive @external");
+  });
+
+  it("omits scalars only needed by omitted definitions", () => {
+    const output = printSourceSchema(
+      buildSubgraphSchema({
+        typeDefs: /* GraphQL */ `
+          type Query {
+            productById(id: ID!): Product @lookup
+          }
+
+          type Product {
+            id: ID!
+          }
+        `,
+      }),
+    );
+
+    // Only @lookup is used; it needs no scalar, and nothing else does either.
+    expect(output).toMatchInlineSnapshot(`
+      "directive @lookup on FIELD_DEFINITION
+
+      type Query {
+        productById(id: ID!): Product @lookup
+      }
+
+      type Product {
+        id: ID!
+      }
+      "
+    `);
   });
 
   it("round-trips through buildSubgraphSchema", () => {
@@ -63,20 +472,6 @@ describe("printSourceSchema", () => {
 
     expect(validateSchema(rebuilt)).toEqual([]);
     expect(printSourceSchema(rebuilt)).toEqual(output);
-  });
-
-  it("produces self-contained SDL with includeFederationDefinitions", () => {
-    const output = printSourceSchema(buildSubgraphSchema({ typeDefs: sdl }), {
-      includeFederationDefinitions: true,
-    });
-
-    expect(output).toContain(
-      "directive @key(fields: FieldSelectionSet!) repeatable on OBJECT | INTERFACE",
-    );
-    expect(output).toContain("scalar FieldSelectionMap");
-
-    const standalone = buildSchema(output);
-    expect(validateSchema(standalone)).toEqual([]);
   });
 
   it("omits the schema block for default root type names, keeps custom ones", () => {
@@ -127,8 +522,9 @@ describe("printSourceSchema", () => {
       "directive @key(fields: FieldSelectionSet!, futureArg: String) repeatable on OBJECT | INTERFACE",
     );
     expect(output).toContain('@key(fields: "id", futureArg: "x")');
-    // The user's FieldSelectionSet copy matches the spec, so it is still omitted.
-    expect(output).not.toContain("scalar FieldSelectionSet");
+    // The kept customized @key references FieldSelectionSet, so the scalar
+    // travels with it even though the user's copy matches the spec.
+    expect(output).toContain("scalar FieldSelectionSet");
 
     const rebuilt = buildSubgraphSchema({ typeDefs: output });
     expect(validateSchema(rebuilt)).toEqual([]);
@@ -139,7 +535,7 @@ describe("printSourceSchema", () => {
     expect(printSourceSchema(rebuilt)).toEqual(output);
   });
 
-  it("still omits user-supplied exact copies of spec definitions", () => {
+  it("does not duplicate user-supplied exact copies of spec definitions", () => {
     const output = printSourceSchema(
       buildSubgraphSchema({
         typeDefs: /* GraphQL */ `
@@ -156,8 +552,9 @@ describe("printSourceSchema", () => {
       }),
     );
 
-    expect(output).not.toContain("directive @lookup");
-    expect(output).toContain("@lookup");
+    // The user's copy and the injected definition collapse into one.
+    expect(output.match(/directive @lookup/g)).toHaveLength(1);
+    expect(output.match(/directive @key/g)).toHaveLength(1);
   });
 
   it("keeps non-federation custom directives and their definitions", () => {
@@ -179,7 +576,7 @@ describe("printSourceSchema", () => {
 
     expect(output).toContain("directive @mine on FIELD_DEFINITION");
     expect(output).toContain("@mine");
-    expect(output).not.toContain("directive @lookup");
+    expect(output).toContain("directive @lookup on FIELD_DEFINITION");
   });
 
   it("merges type extensions into a single printed definition", () => {
@@ -259,9 +656,14 @@ describe("printSourceSchema", () => {
     );
     expect(output).toContain("name: String @shareable");
     expect(output).toContain("productById(id: ID!): Product @lookup");
-    // The spec definitions are still recognized and omitted.
-    expect(output).not.toContain("directive @");
-    expect(output).not.toContain("scalar FieldSelectionSet");
+    // The spec definitions are recognized here too: used ones are exported,
+    // unused ones omitted.
+    expect(output).toContain("directive @key");
+    expect(output).toContain("directive @shareable");
+    expect(output).toContain("directive @lookup");
+    expect(output).toContain("scalar FieldSelectionSet");
+    expect(output).not.toContain("directive @is");
+    expect(output).not.toContain("scalar FieldSelectionMap");
     expect(output).not.toContain("schema {");
   });
 
