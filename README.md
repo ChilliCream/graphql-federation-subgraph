@@ -172,7 +172,7 @@ By default the output contains only your own definitions with the directives app
 | ---------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
 | Specification          | [GraphQL Federation Spec](https://github.com/graphql/composite-schemas-spec) (GraphQL Foundation) | Apollo Federation                                      |
 | Entity resolution      | Ordinary `@lookup` fields with ordinary resolvers                                                 | `Query._entities` + `__resolveReference`               |
-| Schema exposure        | `printSourceSchema` → file for composition                                                      | Runtime `Query._service { sdl }`                       |
+| Schema exposure        | `printSourceSchema` → file for composition                                                        | Runtime `Query._service { sdl }`                       |
 | Injected runtime types | None                                                                                              | `_Service`, `_Entity`, `_Any`, `_service`, `_entities` |
 | Spec linking           | None needed (bare directive names)                                                                | `@link` imports (Federation 2)                         |
 
