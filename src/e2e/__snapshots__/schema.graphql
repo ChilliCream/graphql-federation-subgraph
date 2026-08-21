@@ -1,0 +1,10 @@
+type Query {
+  productById(id: ID!): Product @lookup
+  productBySku(sku: String! @is(field: "sku")): Product @lookup
+}
+
+type Product @key(fields: "id") @key(fields: "sku") {
+  id: ID!
+  sku: String!
+  name: String! @shareable
+}

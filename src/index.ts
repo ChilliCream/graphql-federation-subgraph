@@ -15,6 +15,12 @@ export {
   type PrintSourceSchemaOptions,
 } from "./print-source-schema.js";
 export {
+  createSourceSchemaHandler,
+  type SourceSchemaHandler,
+  type SourceSchemaRequest,
+  type SourceSchemaResponse,
+} from "./create-source-schema-handler.js";
+export {
   federationTypeDefs,
   federationTypeDefsSDL,
   federationDirectiveNames,

@@ -1,7 +1,8 @@
 /**
  * Shared schema, resolvers, and HTTP helpers for the server e2e tests. Every
  * server from the README boots with this subgraph schema and must answer the
- * same query — and expose the same SDL through introspection — the same way.
+ * same query — and expose the same SDL through introspection, and the same
+ * source schema document at /graphql/schema.graphql — the same way.
  */
 import {
   buildClientSchema,
@@ -79,6 +80,65 @@ export async function fetchIntrospectionSdl(url: string): Promise<string> {
       buildClientSchema(result.data as unknown as IntrospectionQuery),
     ),
   );
+}
+
+/**
+ * Fetches the source schema document a server exposes at
+ * `/graphql/schema.graphql`. Every server is checked against the shared
+ * snapshot in `__snapshots__/schema.graphql` — which, unlike the
+ * introspection snapshot, keeps the applied federation directives.
+ *
+ * The transport details the README promises are pinned along the way, since
+ * they rest on host-server plumbing the snapshot alone would not catch (e.g.
+ * Fastify's `exposeHeadRoutes` default and Express's implicit HEAD routing):
+ * a query string must not change the routing, and HEAD must answer with the
+ * document's headers — including its content-length in bytes — and no body.
+ */
+export async function fetchSourceSchemaSdl(url: string): Promise<string> {
+  const sdl = await readSchemaResponse(await fetch(url));
+
+  const withQueryString = await readSchemaResponse(
+    await fetch(`${url}?tooling=probe`),
+  );
+
+  if (withQueryString !== sdl) {
+    throw new Error("A query string changed the served schema document.");
+  }
+
+  const head = await fetch(url, { method: "HEAD" });
+
+  if (head.status !== 200) {
+    throw new Error(`HEAD failed: HTTP ${head.status}`);
+  }
+
+  const contentLength = String(new TextEncoder().encode(sdl).length);
+
+  if (head.headers.get("content-length") !== contentLength) {
+    throw new Error(
+      `HEAD content-length ${String(head.headers.get("content-length"))} does` +
+        ` not match the document's ${contentLength} bytes.`,
+    );
+  }
+
+  if ((await head.text()) !== "") {
+    throw new Error("HEAD answered with a body.");
+  }
+
+  return sdl;
+}
+
+async function readSchemaResponse(response: Response): Promise<string> {
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+  }
+
+  const contentType = response.headers.get("content-type");
+
+  if (contentType !== "application/graphql; charset=utf-8") {
+    throw new Error(`Unexpected content-type: ${String(contentType)}`);
+  }
+
+  return response.text();
 }
 
 export async function postGraphQL(
