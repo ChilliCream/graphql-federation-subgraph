@@ -4,9 +4,16 @@ export {
   type SubgraphTypeSource,
 } from "./build-subgraph-schema.js";
 export {
-  printSubgraphSchema,
-  type PrintSubgraphSchemaOptions,
-} from "./print-subgraph-schema.js";
+  type SubgraphResolvers,
+  type SubgraphTypeResolvers,
+  type SubgraphFieldResolverConfig,
+  type SubgraphScalarResolverConfig,
+  type SubgraphEnumValues,
+} from "./attach-resolvers.js";
+export {
+  printSourceSchema,
+  type PrintSourceSchemaOptions,
+} from "./print-source-schema.js";
 export {
   federationTypeDefs,
   federationTypeDefsSDL,

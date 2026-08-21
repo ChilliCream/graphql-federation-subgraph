@@ -94,17 +94,21 @@ const definitionsSchema = buildASTSchema(federationTypeDefs);
 
 function getDirective(name: string): GraphQLDirective {
   const directive = definitionsSchema.getDirective(name);
+
   if (!directive) {
     throw new Error(`Missing federation directive definition: @${name}`);
   }
+
   return directive;
 }
 
 function getScalar(name: string): GraphQLScalarType {
   const type = definitionsSchema.getType(name);
+
   if (!type) {
     throw new Error(`Missing federation scalar definition: ${name}`);
   }
+
   return type as GraphQLScalarType;
 }
 

@@ -8,8 +8,12 @@ permissions:
 
 jobs:
   typecheck:
-    name: Typecheck
+    name: Typecheck (GraphQL ${{ matrix.graphql-version }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        graphql-version: [16, 17]
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -17,6 +21,10 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      # The lockfile pins graphql 16; swap in the latest release of the major
+      # under test. --legacy-peer-deps because @apollo/server and mercurius
+      # do not declare graphql 17 peer support yet.
+      - run: npm i --no-save --legacy-peer-deps graphql@^${{ matrix.graphql-version }}
       - run: npm run typecheck
 
   lint:
@@ -33,7 +41,7 @@ jobs:
       - run: npm run format:check
 
   test:
-    name: Test (Node ${{ matrix.node-version }})
+    name: Test (Node ${{ matrix.node-version }}, GraphQL ${{ matrix.graphql-version }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -41,6 +49,7 @@ jobs:
         # Node 18 is in the supported engines range but the e2e test servers
         # (@apollo/server 5, fastify 5) require Node >= 20.
         node-version: [20, 22, 24]
+        graphql-version: [16, 17]
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -48,6 +57,11 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: npm
       - run: npm ci
+      # The lockfile pins graphql 16; swap in the latest release of the major
+      # under test. --legacy-peer-deps because @apollo/server and mercurius
+      # do not declare graphql 17 peer support yet (their e2e suites pass on
+      # it regardless).
+      - run: npm i --no-save --legacy-peer-deps graphql@^${{ matrix.graphql-version }}
       - run: npm test
 
   build:

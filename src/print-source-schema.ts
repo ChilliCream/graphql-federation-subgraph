@@ -1,8 +1,8 @@
 import { Kind, print, type DefinitionNode, type GraphQLSchema } from "graphql";
-import { getDocumentNodeFromSchema } from "@graphql-tools/utils";
+import { getDocumentFromSchema } from "./get-document-from-schema.js";
 import { federationTypeDefs } from "./type-defs.js";
 
-export interface PrintSubgraphSchemaOptions {
+export interface PrintSourceSchemaOptions {
   /**
    * When `true`, the definitions of the spec's federation directives and
    * scalars (`directive @key …`, `scalar FieldSelectionMap`, …) are included,
@@ -12,7 +12,7 @@ export interface PrintSubgraphSchemaOptions {
    * as built-ins that composition tooling already knows, so by default the
    * output contains only the user-authored schema with the federation
    * directives applied — and round-trips through
-   * `buildSubgraphSchema({ typeDefs: printSubgraphSchema(schema) })`.
+   * `buildSubgraphSchema({ typeDefs: printSourceSchema(schema) })`.
    *
    * Only definitions that structurally match the spec are omitted. A
    * same-named definition the user customized (e.g. `@key` with an extra
@@ -28,19 +28,21 @@ export interface PrintSubgraphSchemaOptions {
  * `printSchema` from graphql-js would drop. Use this to export the schema
  * document that composition tooling consumes.
  */
-export function printSubgraphSchema(
+export function printSourceSchema(
   schema: GraphQLSchema,
-  options: PrintSubgraphSchemaOptions = {},
+  options: PrintSourceSchemaOptions = {},
 ): string {
-  const document = getDocumentNodeFromSchema(schema);
+  const document = getDocumentFromSchema(schema);
 
   const definitions = document.definitions.filter((definition) => {
     if (isRedundantSchemaDefinition(definition)) {
       return false;
     }
+
     if (options.includeFederationDefinitions) {
       return true;
     }
+
     return !isSpecDefinition(definition);
   });
 
@@ -50,6 +52,7 @@ export function printSubgraphSchema(
 // The spec's definitions in printed form, keyed by node kind + name, so
 // schema definitions can be compared structurally rather than by name alone.
 const specDefinitionSDL = new Map<string, string>();
+
 for (const definition of federationTypeDefs.definitions) {
   if (
     definition.kind === Kind.DIRECTIVE_DEFINITION ||
@@ -69,12 +72,15 @@ function isSpecDefinition(definition: DefinitionNode): boolean {
   ) {
     return false;
   }
+
   const expected = specDefinitionSDL.get(
     `${definition.kind}:${definition.name.value}`,
   );
+
   if (expected === undefined) {
     return false;
   }
+
   // Descriptions don't change what the definition means to composition.
   return print({ ...definition, description: undefined }) === expected;
 }
@@ -86,12 +92,15 @@ function isRedundantSchemaDefinition(definition: DefinitionNode): boolean {
   if (definition.kind !== Kind.SCHEMA_DEFINITION) {
     return false;
   }
+
   if (definition.description || definition.directives?.length) {
     return false;
   }
+
   return (definition.operationTypes ?? []).every((operationType) => {
     const operation = operationType.operation;
     const defaultName = operation.charAt(0).toUpperCase() + operation.slice(1);
+
     return operationType.type.name.value === defaultName;
   });
 }
