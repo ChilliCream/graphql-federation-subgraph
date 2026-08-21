@@ -894,6 +894,89 @@ describe("buildSubgraphSchema", () => {
     ).toThrow(/can only be defined once/);
   });
 
+  it("merges duplicated extend type blocks from shared modules", () => {
+    const sharedModule = /* GraphQL */ `
+      extend type Product @key(fields: "id") {
+        name: String
+      }
+    `;
+    const schema = buildSubgraphSchema({
+      typeDefs: [
+        "type Query { product: Product @lookup }",
+        "type Product { id: ID! }",
+        sharedModule,
+        sharedModule,
+      ],
+    });
+
+    expect(validateSchema(schema)).toEqual([]);
+    expect(printSubgraphSchema(schema)).toMatchInlineSnapshot(`
+      "type Query {
+        product: Product @lookup
+      }
+
+      type Product @key(fields: "id") {
+        id: ID!
+        name: String
+      }
+      "
+    `);
+  });
+
+  it("converts duplicated baseless extensions exactly once", () => {
+    const sharedModule = /* GraphQL */ `
+      extend type Product @key(fields: "id") {
+        id: ID!
+      }
+    `;
+    const schema = buildSubgraphSchema({
+      typeDefs: [
+        "type Query { product: Product @lookup }",
+        sharedModule,
+        sharedModule,
+      ],
+    });
+
+    expect(validateSchema(schema)).toEqual([]);
+    expect(printSubgraphSchema(schema)).toMatchInlineSnapshot(`
+      "type Query {
+        product: Product @lookup
+      }
+
+      type Product @key(fields: "id") {
+        id: ID!
+      }
+      "
+    `);
+  });
+
+  it("merges duplicates that differ only in nested descriptions", () => {
+    const schema = buildSubgraphSchema({
+      typeDefs: [
+        "type Query { productById(id: ID!): String }",
+        'type Query { productById("The id." id: ID!): String }',
+        "directive @tag(name: String) on FIELD_DEFINITION",
+        'directive @tag("Tag name." name: String) on FIELD_DEFINITION',
+      ],
+    });
+
+    expect(validateSchema(schema)).toEqual([]);
+    expect(printSubgraphSchema(schema)).toMatchInlineSnapshot(`
+      "directive @tag(
+        "Tag name."
+        name: String
+      ) on FIELD_DEFINITION
+
+      type Query {
+        productById(
+          "The id."
+          id: ID!
+        ): String
+      }
+      "
+    `);
+  });
+
   it("preserves abstract-type resolvers, subscriptions, and defaults through enum value mapping", async () => {
     const schema = buildSubgraphSchema({
       typeDefs: /* GraphQL */ `

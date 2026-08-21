@@ -76,11 +76,15 @@ export function buildSubgraphSchema<TContext = any>(
     }
   }
 
-  const documents = convertBaselessExtensions(
-    normalizeTypeDefs(options.typeDefs),
-  );
-  const definitions = mergeDuplicateDefinitions(
-    documents.flatMap((doc) => doc.definitions),
+  // Duplicates are merged before baseless extensions are converted, so a
+  // shared `extend type` module included twice collapses into one extension
+  // first and is then promoted (or folded in) exactly once.
+  const definitions = convertBaselessExtensions(
+    mergeDuplicateDefinitions(
+      normalizeTypeDefs(options.typeDefs).flatMap(
+        (document) => document.definitions,
+      ),
+    ),
   );
   const provided = collectDefinedNames(definitions);
 
@@ -109,12 +113,13 @@ export function buildSubgraphSchema<TContext = any>(
 }
 
 // Modular typeDefs arrays commonly repeat a definition — a `type Query` per
-// module, or the federation definitions imported by several modules. SDL
-// validation rejects duplicate names, so same-kind duplicates are merged into
-// one definition first: member lists and directives are concatenated with
-// exact duplicates (by printed form) dropped, while genuine conflicts (same
-// field with different types, same-named definitions of different kinds) are
-// left for SDL validation to report.
+// module, a shared `extend type` block, or the federation definitions
+// imported by several modules. SDL validation rejects duplicate names, so
+// same-kind duplicates (definitions and type extensions alike) are merged
+// into one node first: member lists and directives are concatenated with
+// exact duplicates (by printed form, ignoring documentation) dropped, while
+// genuine conflicts (same field with different types, same-named definitions
+// of different kinds) are left for SDL validation to report.
 function mergeDuplicateDefinitions(
   definitions: readonly DefinitionNode[],
 ): DefinitionNode[] {
@@ -145,14 +150,12 @@ function mergeDuplicateDefinitions(
     }
 
     if (definition.kind === Kind.DIRECTIVE_DEFINITION) {
-      // A duplicate that differs only in its description is the same
-      // definition; keep the copy that carries the description.
+      // A duplicate that differs only in documentation (at any level,
+      // including argument descriptions) is the same definition; keep the
+      // best-documented copy.
       if (strippedPrint(existing) !== strippedPrint(definition)) {
         merged.push(definition);
-      } else if (
-        (existing as { description?: unknown }).description == null &&
-        definition.description != null
-      ) {
+      } else if (countDescriptions(definition) > countDescriptions(existing)) {
         merged[existingIndex] = definition;
       }
 
@@ -184,13 +187,72 @@ function definitionName(definition: DefinitionNode): string | undefined {
     return `schema-extension:${print(definition)}`;
   }
 
+  if (EXTENSION_TO_DEFINITION[definition.kind] !== undefined) {
+    // Same-kind extensions of one type merge like definitions do, so a
+    // shared `extend type` module included by several submodules neither
+    // fails SDL validation nor applies its directives twice.
+    return `extend:${(definition as TypeExtensionNode).name.value}`;
+  }
+
   return undefined;
 }
 
-// Printed form with the top-level description removed, so duplicates that
-// differ only in documentation compare as equal.
+// Printed form with descriptions removed at every level (a field's docstring,
+// an argument's docstring, …), so duplicates that differ only in
+// documentation compare as equal.
 function strippedPrint(node: ASTNode): string {
-  return print({ ...node, description: undefined } as ASTNode);
+  return print(stripDescriptions(node));
+}
+
+function stripDescriptions<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return value.map((entry: unknown) => stripDescriptions(entry)) as T;
+  }
+
+  if (typeof value === "object" && value !== null) {
+    const result: Record<string, unknown> = {};
+
+    for (const [key, entry] of Object.entries(value)) {
+      // `loc` is ignored by print and only inflates the walk.
+      if (key === "description" || key === "loc") {
+        continue;
+      }
+
+      result[key] = stripDescriptions(entry);
+    }
+
+    return result as T;
+  }
+
+  return value;
+}
+
+// How many descriptions a node carries at any depth, so merging can keep the
+// best-documented copy of otherwise-equal duplicates.
+function countDescriptions(node: ASTNode): number {
+  let count = 0;
+
+  const walk = (value: unknown): void => {
+    if (Array.isArray(value)) {
+      value.forEach(walk);
+    } else if (typeof value === "object" && value !== null) {
+      for (const [key, entry] of Object.entries(value)) {
+        if (key === "loc") {
+          continue;
+        }
+
+        if (key === "description" && entry != null) {
+          count += 1;
+        } else {
+          walk(entry);
+        }
+      }
+    }
+  };
+
+  walk(node);
+
+  return count;
 }
 
 const MERGED_MEMBER_PROPS: readonly string[] = [
@@ -224,9 +286,14 @@ function mergeDefinitionPair(
       continue;
     }
 
-    // Members are compared with descriptions stripped, so duplicates that
-    // differ only in documentation merge instead of colliding; the copy
-    // carrying a description wins.
+    // Members are compared with descriptions stripped (at every level, so an
+    // argument docstring doesn't split otherwise-equal fields), letting
+    // duplicates that differ only in documentation merge instead of
+    // colliding; the best-documented copy wins. Deliberate tradeoff: this
+    // also collapses identical applications of a repeatable directive
+    // contributed by DISTINCT duplicates of a type — the common case
+    // (several modules each declaring `type Product @key(fields: "id")`)
+    // wants exactly that, and to composition the repetition is redundant.
     const combined: ASTNode[] = [];
     const indexByKey = new Map<string, number>();
 
@@ -239,10 +306,7 @@ function mergeDefinitionPair(
       if (existingIndex === undefined || existing === undefined) {
         indexByKey.set(key, combined.length);
         combined.push(node);
-      } else if (
-        (existing as { description?: unknown }).description == null &&
-        (node as { description?: unknown }).description != null
-      ) {
+      } else if (countDescriptions(node) > countDescriptions(existing)) {
         combined[existingIndex] = node;
       }
     }
@@ -295,46 +359,38 @@ const EXTENSION_TO_DEFINITION: Partial<Record<string, Kind>> = {
 // Subgraph SDL commonly uses `extend type Query { … }` without defining a
 // base Query type (the idiom @apollo/subgraph accepts). extendSchema rejects
 // extensions of undefined types, so the first extension of a type that has no
-// definition anywhere in the provided documents is turned into the
+// definition anywhere in the provided definitions is turned into the
 // definition; further extensions of it then merge normally.
-function convertBaselessExtensions(documents: DocumentNode[]): DocumentNode[] {
+function convertBaselessExtensions(
+  definitions: readonly DefinitionNode[],
+): DefinitionNode[] {
   const definedTypeNames = new Set<string>();
 
-  for (const document of documents) {
-    for (const definition of document.definitions) {
-      if (isTypeDefinition(definition)) {
-        definedTypeNames.add(definition.name.value);
-      }
+  for (const definition of definitions) {
+    if (isTypeDefinition(definition)) {
+      definedTypeNames.add(definition.name.value);
     }
   }
 
-  return documents.map((document) => {
-    let changed = false;
-    const definitions = document.definitions.map(
-      (definition): DefinitionNode => {
-        const definitionKind = EXTENSION_TO_DEFINITION[definition.kind];
+  return definitions.map((definition): DefinitionNode => {
+    const definitionKind = EXTENSION_TO_DEFINITION[definition.kind];
 
-        if (definitionKind === undefined) {
-          return definition;
-        }
+    if (definitionKind === undefined) {
+      return definition;
+    }
 
-        const name = (definition as TypeExtensionNode).name.value;
+    const name = (definition as TypeExtensionNode).name.value;
 
-        if (definedTypeNames.has(name)) {
-          return definition;
-        }
+    if (definedTypeNames.has(name)) {
+      return definition;
+    }
 
-        definedTypeNames.add(name);
-        changed = true;
+    definedTypeNames.add(name);
 
-        return {
-          ...definition,
-          kind: definitionKind,
-        } as unknown as DefinitionNode;
-      },
-    );
-
-    return changed ? { kind: Kind.DOCUMENT, definitions } : document;
+    return {
+      ...definition,
+      kind: definitionKind,
+    } as unknown as DefinitionNode;
   });
 }
 

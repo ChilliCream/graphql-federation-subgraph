@@ -14,6 +14,7 @@ import {
   isSpecifiedScalarType,
   isUnionType,
   print,
+  valueFromASTUntyped,
   type ConstArgumentNode,
   type ConstDirectiveNode,
   type ConstObjectFieldNode,
@@ -38,10 +39,24 @@ import {
   type NameNode,
   type OperationTypeDefinitionNode,
   type SchemaDefinitionNode,
+  type SchemaExtensionNode,
   type StringValueNode,
   type TypeDefinitionNode,
   type TypeNode,
 } from "graphql";
+import * as graphqlModule from "graphql";
+
+// graphql 17's converter from EXTERNAL input values to literals; absent on
+// graphql 16, where nothing produces the values that need it. Looked up via
+// the namespace so importing the package never fails on either version.
+const valueToLiteral = (
+  graphqlModule as {
+    valueToLiteral?: (
+      value: unknown,
+      type: GraphQLInputType,
+    ) => ConstValueNode | undefined;
+  }
+).valueToLiteral;
 
 /**
  * Converts a schema back into an SDL document *including* applied directives,
@@ -87,39 +102,71 @@ export function getDocumentFromSchema(schema: GraphQLSchema): DocumentNode {
 
 function schemaDefinitionNode(
   schema: GraphQLSchema,
-): SchemaDefinitionNode | undefined {
+): SchemaDefinitionNode | SchemaExtensionNode | undefined {
   const extensionNodes = schema.extensionASTNodes ?? [];
+  const liveOperationTypes = defaultOperationTypes(schema);
 
   if (schema.astNode != null || extensionNodes.length > 0) {
-    const operationTypes = [
+    // The live root types are the source of truth: an AST operation type is
+    // reused when it agrees with the live schema, entries for roots the AST
+    // does not mention (e.g. a default query root next to
+    // `extend schema { mutation: M }`) are synthesized, and stale entries
+    // for roots the schema no longer has are dropped.
+    const astOperationTypes = new Map<
+      OperationTypeNode,
+      OperationTypeDefinitionNode
+    >();
+
+    for (const node of [
       ...(schema.astNode?.operationTypes ?? []),
-      ...extensionNodes.flatMap((node) => node.operationTypes ?? []),
-    ];
+      ...extensionNodes.flatMap((extension) => extension.operationTypes ?? []),
+    ]) {
+      if (!astOperationTypes.has(node.operation)) {
+        astOperationTypes.set(node.operation, node);
+      }
+    }
+
+    const operationTypes = liveOperationTypes.map((live) => {
+      const ast = astOperationTypes.get(live.operation);
+
+      if (ast === undefined) {
+        return live;
+      }
+
+      return ast.type.name.value === live.type.name.value ? ast : live;
+    });
+    const directives = memberDirectives(
+      schema,
+      [
+        ...(schema.astNode?.directives ?? []),
+        ...extensionNodes.flatMap((node) => node.directives ?? []),
+      ],
+      schema,
+      {},
+    );
+
+    if (operationTypes.length === 0) {
+      return buildSchemaExtensionNode(directives);
+    }
 
     return {
       kind: Kind.SCHEMA_DEFINITION,
-      description: schema.astNode?.description,
-      directives: memberDirectives(
-        schema,
-        [
-          ...(schema.astNode?.directives ?? []),
-          ...extensionNodes.flatMap((node) => node.directives ?? []),
-        ],
-        schema,
-        {},
-      ),
-      operationTypes:
-        operationTypes.length > 0
-          ? operationTypes
-          : defaultOperationTypes(schema),
+      description:
+        schema.astNode?.description ?? descriptionNode(schema.description),
+      directives,
+      operationTypes,
     };
   }
 
   // Code-first schema: emit the definition only when it carries information —
   // a description, applied directives, or non-default root type names.
-  const operationTypes = defaultOperationTypes(schema);
   const directives = memberDirectives(schema, [], schema, {});
-  const hasNonDefaultRootName = operationTypes.some(
+
+  if (liveOperationTypes.length === 0) {
+    return buildSchemaExtensionNode(directives);
+  }
+
+  const hasNonDefaultRootName = liveOperationTypes.some(
     (operationType) =>
       operationType.type.name.value !==
       defaultRootTypeName(operationType.operation),
@@ -137,8 +184,20 @@ function schemaDefinitionNode(
     kind: Kind.SCHEMA_DEFINITION,
     description: descriptionNode(schema.description),
     directives,
-    operationTypes,
+    operationTypes: liveOperationTypes,
   };
+}
+
+// A schema with no root operation types cannot print a valid
+// `schema { … }` block — that form would be braceless, invalid SDL. Its
+// directives survive as `extend schema @dir`, which parses; a description,
+// having no valid SDL position without a schema block, is dropped.
+function buildSchemaExtensionNode(
+  directives: ConstDirectiveNode[],
+): SchemaExtensionNode | undefined {
+  return directives.length > 0
+    ? { kind: Kind.SCHEMA_EXTENSION, directives }
+    : undefined;
 }
 
 function defaultRootTypeName(operation: OperationTypeNode): string {
@@ -305,21 +364,107 @@ function inputValueDefinitionNode(
     };
   }
 
-  const defaultValue =
-    input.defaultValue === undefined
-      ? undefined
-      : (astFromValue(input.defaultValue, input.type) as ConstValueNode | null);
-
   return {
     kind: Kind.INPUT_VALUE_DEFINITION,
     description: descriptionNode(input.description),
     name: nameNode(input.name),
     type: typeReferenceNode(input.type),
-    defaultValue: defaultValue ?? undefined,
+    defaultValue: getDefaultValueNode(input),
     directives: memberDirectives(input, [], schema, {
       deprecationReason: input.deprecationReason,
     }),
   };
+}
+
+// graphql 16 exposes code-first defaults as `defaultValue`; graphql 17 stores
+// defaults as a `default` usage carrying either a raw `value` or the SDL
+// `literal` instead. All shapes are read so defaults survive printing across
+// the whole peer range.
+function getDefaultValueNode(
+  input: GraphQLArgument | GraphQLInputField,
+): ConstValueNode | undefined {
+  const defaultUsage = (
+    input as {
+      default?: { value?: unknown; literal?: ConstValueNode } | null;
+    }
+  ).default;
+
+  // The graphql 17 `default` usage takes precedence over the legacy
+  // `defaultValue`, mirroring graphql 17's own getDefaultValueAST.
+  if (defaultUsage != null) {
+    if (defaultUsage.literal != null) {
+      return defaultUsage.literal;
+    }
+
+    if (defaultUsage.value === undefined) {
+      return undefined;
+    }
+
+    // `default.value` is an EXTERNAL input value, so it converts through
+    // valueToLiteral; astFromValue works in the internal domain and would
+    // misread internally-mapped enums and custom scalars. Guarded so an
+    // unconvertible value degrades to no default instead of crashing the
+    // whole print.
+    try {
+      const literal =
+        valueToLiteral !== undefined
+          ? valueToLiteral(defaultUsage.value, input.type)
+          : (astFromValue(
+              defaultUsage.value,
+              input.type,
+            ) as ConstValueNode | null);
+
+      return literal ?? undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
+  if (input.defaultValue !== undefined) {
+    // The legacy field holds an INTERNAL value; astFromValue is the correct
+    // converter here, matching graphql 16's own printSchema.
+    return (
+      (astFromValue(input.defaultValue, input.type) as ConstValueNode | null) ??
+      undefined
+    );
+  }
+
+  return undefined;
+}
+
+/**
+ * Identity of an applied directive by name and argument values (not printed
+ * form — a block string and a plain string spelling the same value must
+ * compare equal), used to dedupe unknown directives.
+ */
+function getDirectiveIdentityKey(node: ConstDirectiveNode): string {
+  const args: Record<string, unknown> = {};
+
+  for (const argument of node.arguments ?? []) {
+    args[argument.name.value] = valueFromASTUntyped(argument.value);
+  }
+
+  return `${node.name.value}:${stableStringify(args)}`;
+}
+
+// JSON-like rendering with object keys sorted at every level, so argument
+// order never affects directive identity.
+function stableStringify(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map((entry) => stableStringify(entry)).join(",")}]`;
+  }
+
+  if (typeof value === "object" && value !== null) {
+    const entries = Object.entries(value)
+      .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
+      .map(
+        ([key, entry]) => `${JSON.stringify(key)}:${stableStringify(entry)}`,
+      );
+
+    return `{${entries.join(",")}}`;
+  }
+
+  return JSON.stringify(value) ?? "undefined";
 }
 
 function enumValueDefinitionNode(
@@ -401,24 +546,43 @@ function memberDirectives(
   extras: DirectiveExtras,
 ): ConstDirectiveNode[] {
   const directives = [...astDirectives];
-  // Snapshots of the AST-sourced directives only: extension entries are
-  // deduped against the SDL-applied directives, not against each other, so
-  // legitimate identical repetitions of a repeatable directive survive.
+  // Snapshots of the AST-sourced directives only: known repeatable entries
+  // are deduped against the SDL-applied directives, not against each other,
+  // so legitimate identical repetitions of a repeatable directive survive.
   const astPrinted = new Set(directives.map((node) => print(node)));
   const appliedNames = new Set(directives.map((node) => node.name.value));
+  // For unknown directives, built lazily from whatever is applied so far.
+  let seenIdentities: Set<string> | undefined;
 
   for (const node of extensionDirectiveNodes(element, schema)) {
     const name = node.name.value;
     const definition = schema?.getDirective(name);
 
-    if (definition?.isRepeatable === true) {
+    if (definition == null) {
+      // Unknown directives must be assumed repeatable — a second @key on a
+      // schema that didn't register the federation directives must not be
+      // silently dropped. Repetition is judged by argument VALUES rather
+      // than printed form (the SDL literal and the extension's rendering
+      // may spell the same value differently, e.g. block vs plain string),
+      // and exact duplicate entries collapse, since identical repetitions
+      // are only legitimate for known repeatable directives.
+      seenIdentities ??= new Set(directives.map(getDirectiveIdentityKey));
+
+      const key = getDirectiveIdentityKey(node);
+
+      if (seenIdentities.has(key)) {
+        continue;
+      }
+
+      seenIdentities.add(key);
+    } else if (definition.isRepeatable) {
       if (astPrinted.has(print(node))) {
         continue;
       }
     } else if (appliedNames.has(name)) {
-      // Non-repeatable (or unknown) directives allow one application; a
-      // spelling difference between the SDL literal and the extension's
-      // rendering must not produce invalid duplicated SDL.
+      // A known non-repeatable directive allows one application; a spelling
+      // difference between the SDL literal and the extension's rendering
+      // must not produce invalid duplicated SDL.
       continue;
     }
 
